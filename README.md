@@ -1,29 +1,24 @@
 # Data Product Trust Gate
 
-A lightweight, explainable demo for validating fictional data-product metadata against a declared readiness policy. It pairs a deterministic Python validator with an animated browser demo.
+A small portfolio demo that evaluates declared metadata for a fictional city-weather data product and issues a scoped **Metadata Readiness Attestation**. The browser UI lets you edit metadata and see the checks and decision update immediately, with an animated check run.
 
-## Demo
+## Run the UI
 
-Open `index.html` in a browser. Choose Ready, Review, or Blocked and run the checks to see the evidence for each result.
+Open `index.html` in a modern browser. Edit the owner, description, refresh age, or comma-separated schema fields. The status updates live; select **Issue readiness attestation** to watch each validation step.
 
-## Validator
+## Run the Python validator
 
-Run the standard-library test suite:
+Requires Python 3.10+ and no third-party packages.
 
 ```bash
 python3 -m unittest discover -s tests -v
-```
-
-Evaluate the sample products:
-
-```bash
 python3 trustgate.py examples/ready.json
 python3 trustgate.py examples/review.json
 python3 trustgate.py examples/blocked.json
 ```
 
-The validator returns `READY`, `REVIEW`, or `BLOCKED` and lists each check, its evidence, and the policy version. It uses only Python's standard library.
+The validator returns `READY`, `REVIEW`, or `BLOCKED` with evidence for contract structure, ownership, description, freshness, and required fields.
 
-## Project boundary
+## Attestation scope
 
-This is an independent portfolio demonstration using synthetic data. It validates declared metadata against a sample policy. It does not authenticate users, grant access, certify production data, or connect to external systems.
+This is an independent demo using synthetic metadata. The attestation verifies only the declared metadata checks in the demo policy. It does not verify live source records, authenticate users, grant access, or certify legal, regulatory, or production-data compliance. The UI currently does not call the Python validator or connect to the named public source.
