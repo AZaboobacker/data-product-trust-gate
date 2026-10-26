@@ -14,7 +14,7 @@
     main{max-width:1120px;margin:34px auto;padding:0 24px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.13em;color:var(--blue);font-weight:750;margin:0 0 9px}h1{font-size:32px;line-height:1.15;letter-spacing:-.04em;margin:0 0 9px} .intro{color:var(--muted);margin:0 0 25px;max-width:760px}
     .layout{display:grid;grid-template-columns:310px 1fr;gap:20px;align-items:start}.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 26px #263b5b08}.card-head{padding:18px 20px;border-bottom:1px solid var(--line);font-weight:700}.card-body{padding:18px 20px}
     .product{font-weight:700;font-size:16px}.domain{font-size:13px;color:var(--muted);margin-top:4px}.kv{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #f0f2f6;font-size:13px}.kv:last-child{border:0}.kv span:first-child{color:var(--muted)}.pill{font-size:11px;padding:3px 8px;border-radius:20px;background:#f1f4f9;color:#536176;white-space:nowrap}
-    label{display:block;font-size:12px;color:var(--muted);font-weight:650;margin:17px 0 6px}select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:white;color:var(--ink);font:inherit}
+    label{display:block;font-size:12px;color:var(--muted);font-weight:650;margin:14px 0 6px}input,textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:white;color:var(--ink);font:13px inherit}textarea{min-height:58px;resize:vertical}input:focus,textarea:focus{outline:2px solid #315efb33;border-color:var(--blue)}
     button{border:0;background:var(--blue);color:white;padding:11px 15px;border-radius:9px;font:700 14px inherit;cursor:pointer;transition:transform .15s,filter .15s}button:hover{filter:brightness(1.06);transform:translateY(-1px)}button:disabled{opacity:.55;cursor:wait;transform:none}.run{width:100%;margin-top:16px}
     .checks{padding:6px 20px 8px}.check{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;min-height:69px;border-bottom:1px solid #f0f2f6;opacity:.48;transition:opacity .25s}.check:last-child{border:0}.check.active,.check.done{opacity:1}.icon{height:30px;width:30px;border-radius:50%;display:grid;place-items:center;background:#f0f3f8;color:#77859a;font-size:14px;font-weight:800}.active .icon{background:#eef2ff;color:var(--blue);animation:pulse 1s infinite}.done.pass .icon{background:#e7f7ef;color:var(--green)}.done.fail .icon{background:#fff0ef;color:var(--red)}.check-title{font-weight:650;font-size:14px}.detail{color:var(--muted);font-size:12px;margin-top:2px}.status{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}.done.pass .status{color:var(--green)}.done.fail .status{color:var(--red)}
     @keyframes pulse{50%{box-shadow:0 0 0 6px #315efb18}}
@@ -33,16 +33,17 @@
       <section class="card">
         <div class="card-head">Product under review</div>
         <div class="card-body">
-          <div class="product" id="productName">Store Inventory Snapshot</div><div class="domain">Retail operations · Fictional example</div>
+          <div class="product" id="productName">City Weather Observations</div><div class="domain">Public weather feed · Portfolio demo</div>
           <div style="margin-top:17px">
-            <div class="kv"><span>Product ID</span><b id="productId">retail.inventory.daily</b></div>
-            <div class="kv"><span>Owner</span><b id="owner">Data Operations</b></div>
-            <div class="kv"><span>Last refreshed</span><b id="refreshed">Today, 06:00 UTC</b></div>
-            <div class="kv"><span>Required fields</span><span class="pill" id="fields">8 of 8 present</span></div>
+            <div class="kv"><span>Product ID</span><b id="productId">weather.city.observations</b></div>
+            <div class="kv"><span>Source</span><b id="source">Open-Meteo API</b></div>
+            <div class="kv"><span>Owner</span><b id="owner">Climate Data Team</b></div>
           </div>
-          <label for="scenario">Choose a sample scenario</label>
-          <select id="scenario"><option value="ready">Ready · all checks pass</option><option value="review">Review · freshness is stale</option><option value="blocked">Blocked · owner is missing</option></select>
-          <button class="run" id="run">Run readiness checks</button>
+          <label for="ownerInput">Owner</label><input id="ownerInput" value="Climate Data Team">
+          <label for="descriptionInput">Business description</label><textarea id="descriptionInput">Hourly weather observations for a selected city, including temperature, humidity, and precipitation.</textarea>
+          <label for="freshnessInput">Last refreshed (hours ago)</label><input id="freshnessInput" type="number" min="0" value="2">
+          <label for="fieldInput">Schema fields (comma-separated)</label><textarea id="fieldInput">city, observed_at, temperature_c, humidity_pct, precipitation_mm, wind_speed_kph, weather_code, source</textarea>
+          <button class="run" id="run">Issue readiness attestation</button>
         </div>
       </section>
       <section class="card" aria-live="polite">
@@ -57,28 +58,41 @@
         <div class="result" id="result"><div><strong id="resultTitle">Ready to run</strong><p id="resultText">Choose a scenario and watch each check complete.</p></div><span class="outcome" id="outcome">NOT RUN</span></div>
       </section>
     </div>
-    <p class="foot"><strong>Demo boundary:</strong> This prototype evaluates fictional, declared metadata. It does not authenticate users, grant access, or certify production data.</p>
+    <p class="foot"><strong>Attestation scope:</strong> Checks the metadata shown here only. It does not verify source records, grant access, or certify legal or regulatory compliance.</p>
   </main>
   <script>
-    const scenarios={
-      ready:{owner:"Data Operations",refreshed:"Today, 06:00 UTC",fields:"8 of 8 present",checks:["Contract parsed · version 1.0","Owner: Data Operations","Description is present","Refresh age: 4 hours · limit: 24 hours","All 8 required fields present"],outcome:"Ready",kind:"ready",summary:"All declared checks passed. This is a readiness signal, not an access grant."},
-      review:{owner:"Data Operations",refreshed:"3 days ago",fields:"8 of 8 present",checks:["Contract parsed · version 1.0","Owner: Data Operations","Description is present","Refresh age: 72 hours · limit: 24 hours","All 8 required fields present"],outcome:"Review",kind:"review",summary:"Freshness is outside the sample policy. Review the source before relying on this product."},
-      blocked:{owner:"Not declared",refreshed:"Today, 06:00 UTC",fields:"8 of 8 present",checks:["Contract parsed · version 1.0","No accountable owner declared","Description is present","Refresh age: 4 hours · limit: 24 hours","All 8 required fields present"],outcome:"Blocked",kind:"blocked",summary:"An owner is required by the sample contract. Add one before this product is considered ready."}
-    };
     const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+    const input={owner:document.querySelector("#ownerInput"),description:document.querySelector("#descriptionInput"),age:document.querySelector("#freshnessInput"),fields:document.querySelector("#fieldInput")};
+    const checksNow=()=>{
+      const fields=input.fields.value.split(",").map(x=>x.trim()).filter(Boolean), age=Number(input.age.value);
+      const rows=[
+        ["Contract structure",true,"All required contract properties are represented."],
+        ["Ownership declared",!!input.owner.value.trim(),input.owner.value.trim()?`Owner: ${input.owner.value.trim()}`:"No accountable owner declared."],
+        ["Business description",!!input.description.value.trim(),input.description.value.trim()?"Description is present.":"Description is missing."],
+        ["Freshness policy",Number.isFinite(age)&&age<=24,Number.isFinite(age)?`Refresh age: ${age} hours · limit: 24 hours.`:"Enter a valid refresh age."],
+        ["Required fields",fields.length>=8,`${fields.length} of 8 required fields present.`]
+      ];
+      const failed=rows.some(x=>!x[1]), stale=!Number.isFinite(age)||age>24;
+      return {rows,fields,decision:failed?"BLOCKED":stale?"REVIEW":"READY"};
+    };
+    const updatePreview=()=>{
+      const r=checksNow();document.querySelector("#owner").textContent=input.owner.value.trim()||"Not declared";
+      document.querySelector("#fields").textContent=`${r.fields.length} of 8 present`;
+      document.querySelectorAll(".check").forEach((row,i)=>{row.querySelector(".detail").textContent=r.rows[i][2];row.querySelector(".status").textContent=r.rows[i][1]?"PASS":"NEEDS FIX";row.className=`check done ${r.rows[i][1]?"pass":"fail"}`;row.querySelector(".icon").textContent=r.rows[i][1]?"✓":"!"});
+      const box=document.querySelector("#result"),decision=r.decision.toLowerCase();box.className=`result ${decision}`;
+      document.querySelector("#resultTitle").textContent=`${r.decision} · Metadata readiness attestation`;
+      document.querySelector("#resultText").textContent=r.decision==="READY"?"All declared metadata checks pass. Attestation covers metadata only.":r.decision==="REVIEW"?"Refresh age exceeds the sample policy; update it or review the source.":"Fix the failed metadata checks to qualify for this attestation.";
+      document.querySelector("#outcome").textContent=r.decision;document.querySelector("#bar").style.width="100%";
+    };
+    Object.values(input).forEach(el=>el.addEventListener("input",updatePreview));
     document.querySelector("#run").addEventListener("click",async()=>{
-      const button=document.querySelector("#run"), scenario=scenarios[document.querySelector("#scenario").value];
-      button.disabled=true;button.textContent="Running checks…";
-      document.querySelector("#result").className="result";document.querySelector("#resultTitle").textContent="Evaluating declared contract";document.querySelector("#resultText").textContent="Checks run locally in this demo.";document.querySelector("#outcome").textContent="RUNNING";document.querySelector("#bar").style.width="0%";
-      const rows=[...document.querySelectorAll(".check")];rows.forEach((row,i)=>{row.className="check";row.querySelector(".icon").textContent=i+1;row.querySelector(".status").textContent="WAITING"});
-      document.querySelector("#owner").textContent=scenario.owner;document.querySelector("#refreshed").textContent=scenario.refreshed;document.querySelector("#fields").textContent=scenario.fields;
-      for(let i=0;i<rows.length;i++){
-        const row=rows[i];row.classList.add("active");row.querySelector(".status").textContent="CHECKING";await wait(430);
-        const fail=(document.querySelector("#scenario").value==="blocked"&&i===1)||(document.querySelector("#scenario").value==="review"&&i===3);
-        row.classList.remove("active");row.classList.add("done",fail?"fail":"pass");row.querySelector(".icon").textContent=fail?"!":"✓";row.querySelector(".status").textContent=fail?(document.querySelector("#scenario").value==="review"?"REVIEW":"MISSING"):"PASSED";row.querySelector(".detail").textContent=scenario.checks[i];document.querySelector("#bar").style.width=`${(i+1)*20}%`;
-      }
-      document.querySelector("#result").className=`result ${scenario.kind}`;document.querySelector("#resultTitle").textContent=`${scenario.outcome} · Readiness decision`;document.querySelector("#resultText").textContent=scenario.summary;document.querySelector("#outcome").textContent=scenario.outcome.toUpperCase();button.disabled=false;button.textContent="Run checks again";
+      const button=document.querySelector("#run"),rows=[...document.querySelectorAll(".check")];button.disabled=true;button.textContent="Checking metadata…";
+      document.querySelector("#bar").style.width="0%";
+      rows.forEach((row,i)=>{row.className="check";row.querySelector(".icon").textContent=i+1;row.querySelector(".status").textContent="WAITING"});
+      for(let i=0;i<rows.length;i++){rows[i].classList.add("active");rows[i].querySelector(".status").textContent="CHECKING";await wait(350);document.querySelector("#bar").style.width=`${(i+1)*20}%`;}
+      updatePreview();button.disabled=false;button.textContent="Re-run certification checks";
     });
+    updatePreview();
   </script>
 </body>
 </html>
