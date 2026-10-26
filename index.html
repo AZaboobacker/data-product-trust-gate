@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f8fc">
+  <title>TrustGate — Data Product Readiness</title>
+  <style>
+    :root{--ink:#17243a;--muted:#68768a;--line:#e4e9f1;--blue:#315efb;--bg:#f6f8fc;--green:#13865c;--red:#c23a43;--amber:#b26a0b}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    header{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100% - 1120px)/2))}
+    .brand{display:flex;align-items:center;gap:11px;font-weight:750;letter-spacing:-.02em}.mark{width:34px;height:34px;border-radius:11px;background:linear-gradient(145deg,#315efb,#7348e8);display:grid;place-items:center;color:white;font-weight:800}
+    .tag{font-size:12px;color:#59677b;background:#f1f4f9;border:1px solid var(--line);padding:5px 9px;border-radius:20px}
+    main{max-width:1120px;margin:34px auto;padding:0 24px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.13em;color:var(--blue);font-weight:750;margin:0 0 9px}h1{font-size:32px;line-height:1.15;letter-spacing:-.04em;margin:0 0 9px} .intro{color:var(--muted);margin:0 0 25px;max-width:760px}
+    .layout{display:grid;grid-template-columns:310px 1fr;gap:20px;align-items:start}.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 26px #263b5b08}.card-head{padding:18px 20px;border-bottom:1px solid var(--line);font-weight:700}.card-body{padding:18px 20px}
+    .product{font-weight:700;font-size:16px}.domain{font-size:13px;color:var(--muted);margin-top:4px}.kv{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #f0f2f6;font-size:13px}.kv:last-child{border:0}.kv span:first-child{color:var(--muted)}.pill{font-size:11px;padding:3px 8px;border-radius:20px;background:#f1f4f9;color:#536176;white-space:nowrap}
+    label{display:block;font-size:12px;color:var(--muted);font-weight:650;margin:17px 0 6px}select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:white;color:var(--ink);font:inherit}
+    button{border:0;background:var(--blue);color:white;padding:11px 15px;border-radius:9px;font:700 14px inherit;cursor:pointer;transition:transform .15s,filter .15s}button:hover{filter:brightness(1.06);transform:translateY(-1px)}button:disabled{opacity:.55;cursor:wait;transform:none}.run{width:100%;margin-top:16px}
+    .checks{padding:6px 20px 8px}.check{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;min-height:69px;border-bottom:1px solid #f0f2f6;opacity:.48;transition:opacity .25s}.check:last-child{border:0}.check.active,.check.done{opacity:1}.icon{height:30px;width:30px;border-radius:50%;display:grid;place-items:center;background:#f0f3f8;color:#77859a;font-size:14px;font-weight:800}.active .icon{background:#eef2ff;color:var(--blue);animation:pulse 1s infinite}.done.pass .icon{background:#e7f7ef;color:var(--green)}.done.fail .icon{background:#fff0ef;color:var(--red)}.check-title{font-weight:650;font-size:14px}.detail{color:var(--muted);font-size:12px;margin-top:2px}.status{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}.done.pass .status{color:var(--green)}.done.fail .status{color:var(--red)}
+    @keyframes pulse{50%{box-shadow:0 0 0 6px #315efb18}}
+    .result{margin:14px 20px 20px;padding:17px 18px;border-radius:12px;background:#f4f6fa;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:76px}.result.ready{background:#eaf7f0}.result.review{background:#fff6e8}.result.blocked{background:#fff0ef}.result strong{font-size:15px}.result p{font-size:12px;color:#58677c;margin:3px 0 0}.outcome{font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;background:#fff;border-radius:20px;white-space:nowrap}.ready .outcome{color:var(--green)}.review .outcome{color:var(--amber)}.blocked .outcome{color:var(--red)}
+    .foot{margin:17px 2px;color:#7c8798;font-size:12px}.foot strong{color:#56647a}.progress{height:3px;background:#eef1f6;margin:0 20px}.bar{height:100%;width:0;background:var(--blue);transition:width .2s}
+    @media(max-width:760px){main{margin-top:24px}.layout{grid-template-columns:1fr}h1{font-size:28px}header{padding:0 20px}.tag{display:none}}
+  </style>
+</head>
+<body>
+  <header><div class="brand"><div class="mark">T</div>TrustGate</div><span class="tag">Independent portfolio demo · Synthetic data</span></header>
+  <main>
+    <p class="eyebrow">Data product readiness</p>
+    <h1>Know what an AI system can trust.</h1>
+    <p class="intro">Run transparent, deterministic checks against a declared product contract. Each result shows the evidence behind the decision.</p>
+    <div class="layout">
+      <section class="card">
+        <div class="card-head">Product under review</div>
+        <div class="card-body">
+          <div class="product" id="productName">Store Inventory Snapshot</div><div class="domain">Retail operations · Fictional example</div>
+          <div style="margin-top:17px">
+            <div class="kv"><span>Product ID</span><b id="productId">retail.inventory.daily</b></div>
+            <div class="kv"><span>Owner</span><b id="owner">Data Operations</b></div>
+            <div class="kv"><span>Last refreshed</span><b id="refreshed">Today, 06:00 UTC</b></div>
+            <div class="kv"><span>Required fields</span><span class="pill" id="fields">8 of 8 present</span></div>
+          </div>
+          <label for="scenario">Choose a sample scenario</label>
+          <select id="scenario"><option value="ready">Ready · all checks pass</option><option value="review">Review · freshness is stale</option><option value="blocked">Blocked · owner is missing</option></select>
+          <button class="run" id="run">Run readiness checks</button>
+        </div>
+      </section>
+      <section class="card" aria-live="polite">
+        <div class="card-head">Readiness checks</div><div class="progress"><div class="bar" id="bar"></div></div>
+        <div class="checks" id="checks">
+          <div class="check" data-check="0"><div class="icon">1</div><div><div class="check-title">Contract structure</div><div class="detail">Required fields and types are present</div></div><span class="status">WAITING</span></div>
+          <div class="check" data-check="1"><div class="icon">2</div><div><div class="check-title">Ownership declared</div><div class="detail">An accountable owner is identified</div></div><span class="status">WAITING</span></div>
+          <div class="check" data-check="2"><div class="icon">3</div><div><div class="check-title">Business description</div><div class="detail">A useful description is available</div></div><span class="status">WAITING</span></div>
+          <div class="check" data-check="3"><div class="icon">4</div><div><div class="check-title">Freshness policy</div><div class="detail">Refresh time is within the declared limit</div></div><span class="status">WAITING</span></div>
+          <div class="check" data-check="4"><div class="icon">5</div><div><div class="check-title">Required fields</div><div class="detail">Declared fields satisfy the sample contract</div></div><span class="status">WAITING</span></div>
+        </div>
+        <div class="result" id="result"><div><strong id="resultTitle">Ready to run</strong><p id="resultText">Choose a scenario and watch each check complete.</p></div><span class="outcome" id="outcome">NOT RUN</span></div>
+      </section>
+    </div>
+    <p class="foot"><strong>Demo boundary:</strong> This prototype evaluates fictional, declared metadata. It does not authenticate users, grant access, or certify production data.</p>
+  </main>
+  <script>
+    const scenarios={
+      ready:{owner:"Data Operations",refreshed:"Today, 06:00 UTC",fields:"8 of 8 present",checks:["Contract parsed · version 1.0","Owner: Data Operations","Description is present","Refresh age: 4 hours · limit: 24 hours","All 8 required fields present"],outcome:"Ready",kind:"ready",summary:"All declared checks passed. This is a readiness signal, not an access grant."},
+      review:{owner:"Data Operations",refreshed:"3 days ago",fields:"8 of 8 present",checks:["Contract parsed · version 1.0","Owner: Data Operations","Description is present","Refresh age: 72 hours · limit: 24 hours","All 8 required fields present"],outcome:"Review",kind:"review",summary:"Freshness is outside the sample policy. Review the source before relying on this product."},
+      blocked:{owner:"Not declared",refreshed:"Today, 06:00 UTC",fields:"8 of 8 present",checks:["Contract parsed · version 1.0","No accountable owner declared","Description is present","Refresh age: 4 hours · limit: 24 hours","All 8 required fields present"],outcome:"Blocked",kind:"blocked",summary:"An owner is required by the sample contract. Add one before this product is considered ready."}
+    };
+    const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+    document.querySelector("#run").addEventListener("click",async()=>{
+      const button=document.querySelector("#run"), scenario=scenarios[document.querySelector("#scenario").value];
+      button.disabled=true;button.textContent="Running checks…";
+      document.querySelector("#result").className="result";document.querySelector("#resultTitle").textContent="Evaluating declared contract";document.querySelector("#resultText").textContent="Checks run locally in this demo.";document.querySelector("#outcome").textContent="RUNNING";document.querySelector("#bar").style.width="0%";
+      const rows=[...document.querySelectorAll(".check")];rows.forEach((row,i)=>{row.className="check";row.querySelector(".icon").textContent=i+1;row.querySelector(".status").textContent="WAITING"});
+      document.querySelector("#owner").textContent=scenario.owner;document.querySelector("#refreshed").textContent=scenario.refreshed;document.querySelector("#fields").textContent=scenario.fields;
+      for(let i=0;i<rows.length;i++){
+        const row=rows[i];row.classList.add("active");row.querySelector(".status").textContent="CHECKING";await wait(430);
+        const fail=(document.querySelector("#scenario").value==="blocked"&&i===1)||(document.querySelector("#scenario").value==="review"&&i===3);
+        row.classList.remove("active");row.classList.add("done",fail?"fail":"pass");row.querySelector(".icon").textContent=fail?"!":"✓";row.querySelector(".status").textContent=fail?(document.querySelector("#scenario").value==="review"?"REVIEW":"MISSING"):"PASSED";row.querySelector(".detail").textContent=scenario.checks[i];document.querySelector("#bar").style.width=`${(i+1)*20}%`;
+      }
+      document.querySelector("#result").className=`result ${scenario.kind}`;document.querySelector("#resultTitle").textContent=`${scenario.outcome} · Readiness decision`;document.querySelector("#resultText").textContent=scenario.summary;document.querySelector("#outcome").textContent=scenario.outcome.toUpperCase();button.disabled=false;button.textContent="Run checks again";
+    });
+  </script>
+</body>
+</html>
