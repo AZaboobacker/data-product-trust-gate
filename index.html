@@ -1,98 +1,26 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f6f8fc">
-  <title>TrustGate — Data Product Readiness</title>
-  <style>
-    :root{--ink:#17243a;--muted:#68768a;--line:#e4e9f1;--blue:#315efb;--bg:#f6f8fc;--green:#13865c;--red:#c23a43;--amber:#b26a0b}
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-    header{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100% - 1120px)/2))}
-    .brand{display:flex;align-items:center;gap:11px;font-weight:750;letter-spacing:-.02em}.mark{width:34px;height:34px;border-radius:11px;background:linear-gradient(145deg,#315efb,#7348e8);display:grid;place-items:center;color:white;font-weight:800}
-    .tag{font-size:12px;color:#59677b;background:#f1f4f9;border:1px solid var(--line);padding:5px 9px;border-radius:20px}
-    main{max-width:1120px;margin:34px auto;padding:0 24px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.13em;color:var(--blue);font-weight:750;margin:0 0 9px}h1{font-size:32px;line-height:1.15;letter-spacing:-.04em;margin:0 0 9px} .intro{color:var(--muted);margin:0 0 25px;max-width:760px}
-    .layout{display:grid;grid-template-columns:310px 1fr;gap:20px;align-items:start}.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 26px #263b5b08}.card-head{padding:18px 20px;border-bottom:1px solid var(--line);font-weight:700}.card-body{padding:18px 20px}
-    .product{font-weight:700;font-size:16px}.domain{font-size:13px;color:var(--muted);margin-top:4px}.kv{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #f0f2f6;font-size:13px}.kv:last-child{border:0}.kv span:first-child{color:var(--muted)}.pill{font-size:11px;padding:3px 8px;border-radius:20px;background:#f1f4f9;color:#536176;white-space:nowrap}
-    label{display:block;font-size:12px;color:var(--muted);font-weight:650;margin:14px 0 6px}input,textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:white;color:var(--ink);font:13px inherit}textarea{min-height:58px;resize:vertical}input:focus,textarea:focus{outline:2px solid #315efb33;border-color:var(--blue)}
-    button{border:0;background:var(--blue);color:white;padding:11px 15px;border-radius:9px;font:700 14px inherit;cursor:pointer;transition:transform .15s,filter .15s}button:hover{filter:brightness(1.06);transform:translateY(-1px)}button:disabled{opacity:.55;cursor:wait;transform:none}.run{width:100%;margin-top:16px}
-    .checks{padding:6px 20px 8px}.check{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;min-height:69px;border-bottom:1px solid #f0f2f6;opacity:.48;transition:opacity .25s}.check:last-child{border:0}.check.active,.check.done{opacity:1}.icon{height:30px;width:30px;border-radius:50%;display:grid;place-items:center;background:#f0f3f8;color:#77859a;font-size:14px;font-weight:800}.active .icon{background:#eef2ff;color:var(--blue);animation:pulse 1s infinite}.done.pass .icon{background:#e7f7ef;color:var(--green)}.done.fail .icon{background:#fff0ef;color:var(--red)}.check-title{font-weight:650;font-size:14px}.detail{color:var(--muted);font-size:12px;margin-top:2px}.status{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}.done.pass .status{color:var(--green)}.done.fail .status{color:var(--red)}
-    @keyframes pulse{50%{box-shadow:0 0 0 6px #315efb18}}
-    .result{margin:14px 20px 20px;padding:17px 18px;border-radius:12px;background:#f4f6fa;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:76px}.result.ready{background:#eaf7f0}.result.review{background:#fff6e8}.result.blocked{background:#fff0ef}.result strong{font-size:15px}.result p{font-size:12px;color:#58677c;margin:3px 0 0}.outcome{font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;background:#fff;border-radius:20px;white-space:nowrap}.ready .outcome{color:var(--green)}.review .outcome{color:var(--amber)}.blocked .outcome{color:var(--red)}
-    .foot{margin:17px 2px;color:#7c8798;font-size:12px}.foot strong{color:#56647a}.progress{height:3px;background:#eef1f6;margin:0 20px}.bar{height:100%;width:0;background:var(--blue);transition:width .2s}
-    @media(max-width:760px){main{margin-top:24px}.layout{grid-template-columns:1fr}h1{font-size:28px}header{padding:0 20px}.tag{display:none}}
-  </style>
-</head>
-<body>
-  <header><div class="brand"><div class="mark">T</div>TrustGate</div><span class="tag">Independent portfolio demo · Synthetic data</span></header>
-  <main>
-    <p class="eyebrow">Data product readiness</p>
-    <h1>Know what an AI system can trust.</h1>
-    <p class="intro">Run transparent, deterministic checks against a declared product contract. Each result shows the evidence behind the decision.</p>
-    <div class="layout">
-      <section class="card">
-        <div class="card-head">Product under review</div>
-        <div class="card-body">
-          <div class="product" id="productName">City Weather Observations</div><div class="domain">Public weather feed · Portfolio demo</div>
-          <div style="margin-top:17px">
-            <div class="kv"><span>Product ID</span><b id="productId">weather.city.observations</b></div>
-            <div class="kv"><span>Source</span><b id="source">Open-Meteo API</b></div>
-            <div class="kv"><span>Owner</span><b id="owner">Climate Data Team</b></div>
-          </div>
-          <label for="ownerInput">Owner</label><input id="ownerInput" value="Climate Data Team">
-          <label for="descriptionInput">Business description</label><textarea id="descriptionInput">Hourly weather observations for a selected city, including temperature, humidity, and precipitation.</textarea>
-          <label for="freshnessInput">Last refreshed (hours ago)</label><input id="freshnessInput" type="number" min="0" value="2">
-          <label for="fieldInput">Schema fields (comma-separated)</label><textarea id="fieldInput">city, observed_at, temperature_c, humidity_pct, precipitation_mm, wind_speed_kph, weather_code, source</textarea>
-          <button class="run" id="run">Issue readiness attestation</button>
-        </div>
-      </section>
-      <section class="card" aria-live="polite">
-        <div class="card-head">Readiness checks</div><div class="progress"><div class="bar" id="bar"></div></div>
-        <div class="checks" id="checks">
-          <div class="check" data-check="0"><div class="icon">1</div><div><div class="check-title">Contract structure</div><div class="detail">Required fields and types are present</div></div><span class="status">WAITING</span></div>
-          <div class="check" data-check="1"><div class="icon">2</div><div><div class="check-title">Ownership declared</div><div class="detail">An accountable owner is identified</div></div><span class="status">WAITING</span></div>
-          <div class="check" data-check="2"><div class="icon">3</div><div><div class="check-title">Business description</div><div class="detail">A useful description is available</div></div><span class="status">WAITING</span></div>
-          <div class="check" data-check="3"><div class="icon">4</div><div><div class="check-title">Freshness policy</div><div class="detail">Refresh time is within the declared limit</div></div><span class="status">WAITING</span></div>
-          <div class="check" data-check="4"><div class="icon">5</div><div><div class="check-title">Required fields</div><div class="detail">Declared fields satisfy the sample contract</div></div><span class="status">WAITING</span></div>
-        </div>
-        <div class="result" id="result"><div><strong id="resultTitle">Ready to run</strong><p id="resultText">Choose a scenario and watch each check complete.</p></div><span class="outcome" id="outcome">NOT RUN</span></div>
-      </section>
-    </div>
-    <p class="foot"><strong>Attestation scope:</strong> Checks the metadata shown here only. It does not verify source records, grant access, or certify legal or regulatory compliance.</p>
-  </main>
-  <script>
-    const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-    const input={owner:document.querySelector("#ownerInput"),description:document.querySelector("#descriptionInput"),age:document.querySelector("#freshnessInput"),fields:document.querySelector("#fieldInput")};
-    const checksNow=()=>{
-      const fields=input.fields.value.split(",").map(x=>x.trim()).filter(Boolean), age=Number(input.age.value);
-      const rows=[
-        ["Contract structure",true,"All required contract properties are represented."],
-        ["Ownership declared",!!input.owner.value.trim(),input.owner.value.trim()?`Owner: ${input.owner.value.trim()}`:"No accountable owner declared."],
-        ["Business description",!!input.description.value.trim(),input.description.value.trim()?"Description is present.":"Description is missing."],
-        ["Freshness policy",Number.isFinite(age)&&age<=24,Number.isFinite(age)?`Refresh age: ${age} hours · limit: 24 hours.`:"Enter a valid refresh age."],
-        ["Required fields",fields.length>=8,`${fields.length} of 8 required fields present.`]
-      ];
-      const failed=rows.some(x=>!x[1]), stale=!Number.isFinite(age)||age>24;
-      return {rows,fields,decision:failed?"BLOCKED":stale?"REVIEW":"READY"};
-    };
-    const updatePreview=()=>{
-      const r=checksNow();document.querySelector("#owner").textContent=input.owner.value.trim()||"Not declared";
-      document.querySelector("#fields").textContent=`${r.fields.length} of 8 present`;
-      document.querySelectorAll(".check").forEach((row,i)=>{row.querySelector(".detail").textContent=r.rows[i][2];row.querySelector(".status").textContent=r.rows[i][1]?"PASS":"NEEDS FIX";row.className=`check done ${r.rows[i][1]?"pass":"fail"}`;row.querySelector(".icon").textContent=r.rows[i][1]?"✓":"!"});
-      const box=document.querySelector("#result"),decision=r.decision.toLowerCase();box.className=`result ${decision}`;
-      document.querySelector("#resultTitle").textContent=`${r.decision} · Metadata readiness attestation`;
-      document.querySelector("#resultText").textContent=r.decision==="READY"?"All declared metadata checks pass. Attestation covers metadata only.":r.decision==="REVIEW"?"Refresh age exceeds the sample policy; update it or review the source.":"Fix the failed metadata checks to qualify for this attestation.";
-      document.querySelector("#outcome").textContent=r.decision;document.querySelector("#bar").style.width="100%";
-    };
-    Object.values(input).forEach(el=>el.addEventListener("input",updatePreview));
-    document.querySelector("#run").addEventListener("click",async()=>{
-      const button=document.querySelector("#run"),rows=[...document.querySelectorAll(".check")];button.disabled=true;button.textContent="Checking metadata…";
-      document.querySelector("#bar").style.width="0%";
-      rows.forEach((row,i)=>{row.className="check";row.querySelector(".icon").textContent=i+1;row.querySelector(".status").textContent="WAITING"});
-      for(let i=0;i<rows.length;i++){rows[i].classList.add("active");rows[i].querySelector(".status").textContent="CHECKING";await wait(350);document.querySelector("#bar").style.width=`${(i+1)*20}%`;}
-      updatePreview();button.disabled=false;button.textContent="Re-run certification checks";
-    });
-    updatePreview();
-  </script>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TrustGate | Data Product Readiness</title>
+<style>
+:root{--ink:#17243a;--muted:#68768a;--line:#e4e9f1;--blue:#315efb;--bg:#f6f8fc;--green:#13865c;--red:#c23a43;--amber:#b26a0b}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}header{background:#fff;border-bottom:1px solid var(--line);padding:16px max(24px,calc((100% - 1080px)/2));font-weight:750}main{max-width:1080px;margin:34px auto;padding:0 24px}h1{font-size:32px;letter-spacing:-.04em;margin:0 0 8px}.muted{color:var(--muted)}.intro{margin:0 0 22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{background:white;border:1px solid var(--line);border-radius:15px;box-shadow:0 8px 26px #263b5b08;padding:19px;margin-bottom:18px}.card h2{font-size:16px;margin:0 0 14px}.badge{float:right;border-radius:20px;padding:4px 9px;background:#f1f4f9;font-size:11px}.row{padding:10px 0;border-bottom:1px solid #f0f2f6;display:flex;justify-content:space-between;gap:10px;font-size:13px}.row:last-child{border:0}label{display:block;font-size:12px;font-weight:650;color:var(--muted);margin:13px 0 5px}input,textarea{width:100%;font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:9px;color:var(--ink)}textarea{min-height:58px;resize:vertical}.checks{margin:0;padding:0;list-style:none}.check{display:flex;gap:11px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #f0f2f6}.icon{width:25px;height:25px;flex:none;border-radius:50%;display:grid;place-items:center;background:#eef1f6;color:#708097;font-weight:800}.pass .icon{background:#e7f7ef;color:var(--green)}.fail .icon{background:#fff0ef;color:var(--red)}.checking .icon{background:#eef2ff;color:var(--blue);animation:pulse .8s infinite}.detail{color:var(--muted);font-size:12px}.status{margin-left:auto;font-size:10px;font-weight:800;color:var(--muted)}.result{border-radius:10px;padding:14px;margin-top:15px;background:#f3f5f9}.READY{background:#eaf7f0}.REVIEW{background:#fff6e8}.BLOCKED,.FAIL{background:#fff0ef}.result strong{font-size:14px}.result p{font-size:12px;margin:4px 0 0;color:#56647a}button{border:0;border-radius:8px;padding:10px 14px;background:var(--blue);color:white;font-weight:700;cursor:pointer;margin:8px 8px 0 0}button:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#536176}.disclaimer{font-size:12px;color:#68768a;margin:10px 0 26px}@keyframes pulse{50%{box-shadow:0 0 0 5px #315efb22}}@media(max-width:720px){.grid{grid-template-columns:1fr}h1{font-size:27px}}
+</style></head>
+<body><header>◈ TrustGate <span class="badge">Independent portfolio demo · synthetic metadata</span></header>
+<main><p class="muted" style="text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:800">Data product trust, made inspectable</p><h1>City Weather Observations</h1><p class="intro muted">Explore three evidence layers: declared metadata, a live source check, and purpose-specific readiness.</p>
+<div class="grid"><section class="card"><h2>Product metadata <span class="badge">Editable</span></h2><div class="row"><span>Product ID</span><b>weather.city.observations</b></div><div class="row"><span>Source</span><b>Open-Meteo · New York</b></div>
+<label for="owner">Owner</label><input id="owner" value="Climate Data Team"><label for="description">Business description</label><textarea id="description">Hourly weather observations for a selected city, including temperature, humidity, and precipitation.</textarea><label for="age">Declared refresh age (hours)</label><input id="age" type="number" min="0" value="2"><label for="fields">Schema fields (comma separated)</label><textarea id="fields">city, observed_at, temperature_c, humidity_pct, precipitation_mm, wind_speed_kph, weather_code, source</textarea>
+<div class="result" id="metaResult"><strong id="metaTitle">Metadata attestation: READY</strong><p id="metaText">All declared metadata rules currently pass.</p></div><button id="runMeta">Animate metadata checks</button></section>
+<section class="card"><h2>Metadata attestation <span class="badge">Local deterministic checks</span></h2><ul class="checks" id="checks"></ul><div class="detail">Checks: owner, description, refresh age ≤ 24h, and at least 8 named fields.</div></section></div>
+<section class="card"><h2>Live source verification <span class="badge" id="sourceBadge">Not checked</span></h2><p class="muted" style="font-size:13px">Calls Open-Meteo for New York. Checks API response, expected hourly fields, and whether the returned observation is recent.</p><button id="checkSource">Check live Open-Meteo source</button><div class="result" id="sourceResult"><strong id="sourceTitle">Source check not run</strong><p id="sourceText">This check needs an internet connection and can fail if the API is unavailable.</p></div></section>
+<section class="card"><h2>Purpose-specific readiness certification</h2><p class="muted" style="font-size:13px">These controls are self-declared in this demo; they are not independently verified.</p><div class="grid" id="controls"><label><input type="checkbox" checked> Intended use documented</label><label><input type="checkbox" checked> Sensitivity classified</label><label><input type="checkbox" checked> Access policy documented</label><label><input type="checkbox" checked> Lineage documented</label><label><input type="checkbox" checked> Quality expectations defined</label></div><button id="issue" disabled>Issue readiness certificate</button><button class="secondary" id="download" disabled>Download certificate JSON</button><div class="result" id="certResult"><strong id="certTitle">No certificate issued</strong><p id="certText">Requires passing metadata checks, a passing live source check, and all declared controls.</p></div></section>
+<p class="disclaimer"><b>Scope:</b> This portfolio demo is not a production control or regulatory certification. Metadata and governance controls are declared; only the API response checks are live. A certificate expires after 24 hours and becomes stale if metadata or controls change.</p></main>
+<script>
+const $=s=>document.querySelector(s),fields=()=>$('#fields').value.split(',').map(x=>x.trim()).filter(Boolean);let sourceEvidence=null,certificate=null,metaPass=false;
+function evaluate(){const age=Number($('#age').value), checks=[['Owner declared',!!$('#owner').value.trim(),$('#owner').value.trim()||'Owner is blank'],['Description present',!!$('#description').value.trim(),$('#description').value.trim()?'Description is present':'Description is blank'],['Freshness policy',Number.isFinite(age)&&age>=0&&age<=24,`Refresh age ${age}h; limit 24h`],['Required fields',fields().length>=8,`${fields().length} of 8 fields present`]];metaPass=checks.every(c=>c[1]);$('#checks').innerHTML=checks.map(c=>`<li class="check ${c[1]?'pass':'fail'}"><span class="icon">${c[1]?'✓':'!'}</span><div><b>${c[0]}</b><div class="detail">${c[2]}</div></div><span class="status">${c[1]?'PASS':'FAIL'}</span></li>`).join('');$('#metaTitle').textContent=`Metadata attestation: ${metaPass?'READY':checks.some(c=>!c[1]&&c[0]==='Freshness policy')?'REVIEW':'BLOCKED'}`;$('#metaText').textContent=metaPass?'All declared metadata rules pass.':'Resolve failed metadata checks to pass.';$('#metaResult').className=`result ${metaPass?'READY':checks.some(c=>!c[1]&&c[0]==='Freshness policy')?'REVIEW':'BLOCKED'}`;invalidate();}
+function invalidate(){certificate=null;$('#download').disabled=true;$('#certResult').className='result';$('#certTitle').textContent='No current certificate';$('#certText').textContent='Any metadata/control edit invalidates a prior certificate. Re-run checks and issue a new one.';eligibility();}
+function eligibility(){$('#issue').disabled=!(metaPass&&sourceEvidence?.pass&&[...document.querySelectorAll('#controls input')].every(x=>x.checked));}
+['#owner','#description','#age','#fields'].forEach(s=>$(s).addEventListener('input',evaluate));document.querySelectorAll('#controls input').forEach(x=>x.addEventListener('change',()=>{invalidate();eligibility()}));
+$('#runMeta').onclick=async()=>{const b=$('#runMeta');b.disabled=true;for(const li of document.querySelectorAll('.check')){li.classList.add('checking');li.querySelector('.status').textContent='CHECKING';await new Promise(r=>setTimeout(r,300));li.classList.remove('checking')}evaluate();b.disabled=false};
+$('#checkSource').onclick=async()=>{const b=$('#checkSource');b.disabled=true;$('#sourceBadge').textContent='Checking…';$('#sourceResult').className='result';$('#sourceTitle').textContent='Contacting public weather API';try{const url='https://api.open-meteo.com/v1/forecast?latitude=40.7128&longitude=-74.0060&hourly=temperature_2m,relative_humidity_2m,precipitation&forecast_days=1';const response=await fetch(url);if(!response.ok)throw Error(`HTTP ${response.status}`);const data=await response.json(),h=data.hourly;if(!h||!h.time?.length||!h.temperature_2m||!h.relative_humidity_2m||!h.precipitation)throw Error('Expected hourly fields are missing');const latest=h.time[h.time.length-1],age=(Date.now()-Date.parse(latest))/3600000,pass=Number.isFinite(age)&&age<48;sourceEvidence={pass,checked_at:new Date().toISOString(),endpoint:'Open-Meteo forecast API (New York coordinates)',latest_observation:latest,returned_fields:Object.keys(h)};$('#sourceBadge').textContent=pass?'PASS · Live':'REVIEW · Stale';$('#sourceTitle').textContent=pass?'Live source verified':'Source returned data, but observation is stale';$('#sourceText').textContent=`HTTP ${response.status}; expected hourly fields found; latest returned observation: ${latest}. This verifies API response shape and recency only.`;$('#sourceResult').className=`result ${pass?'READY':'REVIEW'}`}catch(e){sourceEvidence={pass:false,checked_at:new Date().toISOString(),error:e.message};$('#sourceBadge').textContent='FAIL';$('#sourceTitle').textContent='Live source check failed';$('#sourceText').textContent=`${e.message}. Metadata attestation is unaffected.`;$('#sourceResult').className='result FAIL'}b.disabled=false;eligibility()};
+$('#issue').onclick=()=>{if(!metaPass||!sourceEvidence?.pass)return;const controls=[...document.querySelectorAll('#controls input')].map(x=>({control:x.parentElement.textContent.trim(),declared:x.checked}));certificate={certificate_id:`TG-${crypto.randomUUID()}`,issued_at:new Date().toISOString(),expires_at:new Date(Date.now()+86400000).toISOString(),policy_version:'1.0',product_id:'weather.city.observations',certification_level:'Demo readiness certification',metadata_attestation:{status:'READY',checks:['owner declared','description present','freshness <= 24h','at least 8 named fields']},live_source_verification:sourceEvidence,governance_controls:controls,scope:'Demo readiness only. Governance controls are self-declared, not independently verified. Not a regulatory, access, or production-data certification.'};$('#certResult').className='result READY';$('#certTitle').textContent=`Certificate issued · ${certificate.certificate_id}`;$('#certText').textContent=`Issued ${certificate.issued_at}. Expires in 24 hours. Editing metadata or controls invalidates it.`;$('#download').disabled=false};
+$('#download').onclick=()=>{if(!certificate)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(certificate,null,2)],{type:'application/json'}));a.download=`${certificate.certificate_id}.json`;a.click();URL.revokeObjectURL(a.href)};
+evaluate();
+</script></body></html>
