@@ -1,0 +1,28 @@
+name: TrustGate checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run Python tests
+        run: python -m unittest discover -s tests -v
+      - name: Run browser-logic tests
+        run: node --test tests/test_trustgate_ui.mjs
+      - name: Check JavaScript syntax
+        run: |
+          node --check trustgate-core.mjs
+          node --check trustgate-ui.mjs

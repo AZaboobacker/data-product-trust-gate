@@ -1,34 +1,55 @@
-# Data Product Trust Gate
+# TrustGate — Data Product Readiness Demo
 
-TrustGate is a portfolio demo that distinguishes a metadata attestation, a live source check, and a purpose-specific readiness certificate. It uses a city-weather example and fictional product metadata.
+TrustGate is an independent portfolio project that makes data-product readiness decisions inspectable. It uses fictional metadata and a public city-weather API; it has no employer branding, private data, credentials, or platform integrations.
 
-## Run the browser demo
+## Run the demo
 
-No installation is needed. Clone or download the repository, then open `index.html` in a modern browser. Edit the metadata and observe the attestation update. Choose **Animate metadata checks** to see the checks run. Select **Check live Open-Meteo source** to call the public weather API for New York. After metadata checks pass, the source check passes, and all five declared controls are selected, choose **Issue readiness certificate**. Download the issued certificate as JSON.
+Requirements: Python 3 for the local web server and a modern browser. No package install or API key is needed.
 
-The live check requires internet access. If direct local-file browser requests are blocked, run a simple local server from the repository directory with `python3 -m http.server 8000` and open `http://localhost:8000`.
+From the repository directory, run:
 
-## Three evidence layers
+```bash
+python3 -m http.server 8000
+```
 
-1. **Metadata attestation** checks owner, description, declared refresh age (24-hour limit), and at least eight named fields. These values are edited in the demo and are not fetched from the API.
-2. **Live source verification** calls Open-Meteo and checks response success, expected hourly fields, and recency of the returned observation. It is a read-only request and needs no API key.
-3. **Readiness certificate** requires passing metadata and live-source checks plus five explicitly self-declared controls: intended use, sensitivity, access policy, lineage, and quality expectations. It creates a downloadable JSON record with a unique ID, issue and expiry times, policy version, evidence, and scope.
+Open [http://localhost:8000](http://localhost:8000). Stop the server with **Ctrl+C**. Use `python` instead of `python3` on Windows if needed. Internet access is required only for the live Open-Meteo check; metadata checks and scenario presets work offline.
 
-Changing metadata or controls invalidates an issued certificate. The sample certificate expires after 24 hours. Governance controls are self-declared; they are not independently verified.
+### Demo walkthrough
 
-## Python validator and tests
+1. Choose **Ready**, **Needs review**, or **Blocked** to see how the metadata decision changes.
+2. Edit the owner, business description, declared refresh age, or comma-separated schema fields. The attestation recalculates immediately.
+3. Choose **Run animated checks** to watch each metadata rule execute.
+4. Choose **Check live source** to call Open-Meteo for current conditions in New York. A passing result requires an HTTP success, the expected current fields and numeric values, and a recent timestamp. Source evidence must be refreshed after 15 minutes.
+5. With ready metadata, fresh passing source evidence, and all five self-declared controls selected, choose **Issue readiness certificate** and **Download JSON**.
+6. Edit metadata or a control after issuance: the certificate is invalidated. The demo certificate expires after 24 hours.
 
-Requires Python 3.10 or newer; no third-party packages are needed.
+## What the three evidence layers mean
+
+1. **Metadata attestation** — deterministic checks for an owner, a business description, a declared refresh age of no more than 24 hours, and at least eight distinct schema field names. Missing/invalid essentials block; over-limit freshness requires review.
+2. **Live source verification** — a read-only check against Open-Meteo's current-conditions endpoint. It checks response success, required fields, numeric values, and timestamp recency. It does not prove the full dataset's correctness or quality.
+3. **Purpose-specific readiness certificate** — a downloadable record containing the metadata snapshot, live-source evidence, policy version, timestamps, and five author-declared readiness controls. The controls are not independently verified; this is not a production, access, security, regulatory, or compliance certification.
+
+## Python metadata validator
+
+The standalone validator checks JSON product contracts; it is independent of the browser demo and does not call the live API.
 
 ```bash
 python3 trustgate.py examples/ready.json
 python3 trustgate.py examples/review.json
 python3 trustgate.py examples/blocked.json
-python3 -m unittest discover -s tests -v
 ```
 
-On Windows, replace `python3` with `python` if needed. The Python validator checks JSON contracts independently from the browser UI; it does not call the live API.
+The `ready.json` fixture contains a fixed synthetic refresh timestamp and will naturally age into `REVIEW` after 24 hours. The tests use a controlled clock for repeatable results.
 
-## Important scope limits
+## Tests
 
-This demo is not a production control, access grant, or regulatory certification. The live check verifies only API availability, selected response fields, and returned observation recency. It does not establish correctness or safety of all source data. Governance controls are declarations, not verified evidence. No employer systems, credentials, or private data are used.
+Requirements: Python 3.10+ and Node.js 18+. Both test suites use built-in libraries; no dependencies need to be installed.
+
+```bash
+python3 -m unittest discover -s tests -v
+node --test tests/test_trustgate_ui.mjs
+node --check trustgate-core.mjs
+node --check trustgate-ui.mjs
+```
+
+The tests cover Python contract decisions, browser-side metadata and source evidence rules, missing/stale/future source data, 15-minute evidence freshness, readiness gating, and certificate scope and expiration. The UI is designed to run locally; a real live source check requires browser internet access.

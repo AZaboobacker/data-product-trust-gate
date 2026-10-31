@@ -35,20 +35,25 @@ def evaluate(product: dict[str, Any], now: datetime | None = None) -> dict[str, 
     if not desc_ok:
         issues.append("A business description is required.")
 
-    stale = False
+    freshness_review = False
     refreshed = product.get("refreshed_at")
     try:
         stamp = datetime.fromisoformat(str(refreshed).replace("Z", "+00:00"))
         if stamp.tzinfo is None:
             stamp = stamp.replace(tzinfo=timezone.utc)
-        age_hours = max(0, (now - stamp.astimezone(timezone.utc)).total_seconds() / 3600)
+        age_hours = (now.astimezone(timezone.utc) - stamp.astimezone(timezone.utc)).total_seconds() / 3600
+        future = age_hours < -0.0833
         stale = age_hours > 24
-        freshness_evidence = f"Refresh age: {age_hours:.1f} hours; policy limit: 24 hours."
+        freshness_review = future or stale
+        freshness_evidence = (
+            f"Refresh timestamp is {abs(age_hours):.1f} hours in the future; review required."
+            if future else f"Refresh age: {age_hours:.1f} hours; policy limit: 24 hours."
+        )
     except (TypeError, ValueError):
-        stale = True
+        freshness_review = True
         freshness_evidence = "Refresh timestamp is missing or invalid."
-    checks.append({"name": "Freshness policy", "status": "REVIEW" if stale else "PASS", "evidence": freshness_evidence})
-    if stale:
+    checks.append({"name": "Freshness policy", "status": "REVIEW" if freshness_review else "PASS", "evidence": freshness_evidence})
+    if freshness_review:
         issues.append("Freshness needs review against the 24-hour sample policy.")
 
     fields = product.get("fields")
@@ -60,7 +65,7 @@ def evaluate(product: dict[str, Any], now: datetime | None = None) -> dict[str, 
 
     if any(c["status"] == "FAIL" for c in checks):
         decision = "BLOCKED"
-    elif stale:
+    elif freshness_review:
         decision = "REVIEW"
     else:
         decision = "READY"
@@ -83,3 +88,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

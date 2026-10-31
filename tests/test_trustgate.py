@@ -1,12 +1,12 @@
 import json
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from trustgate import evaluate
 
 ROOT = Path(__file__).resolve().parents[1]
-NOW = datetime(2026, 10, 26, 12, tzinfo=timezone.utc)
+NOW = datetime.now(timezone.utc)
 
 
 class TrustGateTests(unittest.TestCase):
@@ -14,7 +14,9 @@ class TrustGateTests(unittest.TestCase):
         return json.loads((ROOT / "examples" / f"{name}.json").read_text())
 
     def test_ready_product_passes(self):
-        result = evaluate(self.load("ready"), NOW)
+        product = self.load("ready")
+        product["refreshed_at"] = NOW.isoformat()
+        result = evaluate(product, NOW)
         self.assertEqual(result["decision"], "READY")
         self.assertTrue(all(c["status"] == "PASS" for c in result["checks"]))
 
@@ -33,6 +35,13 @@ class TrustGateTests(unittest.TestCase):
         product["refreshed_at"] = "not-a-timestamp"
         self.assertEqual(evaluate(product, NOW)["decision"], "REVIEW")
 
+    def test_future_timestamp_requires_review(self):
+        product = self.load("ready")
+        product["refreshed_at"] = (NOW + timedelta(hours=1)).isoformat()
+        result = evaluate(product, NOW)
+        self.assertEqual(result["decision"], "REVIEW")
+        self.assertEqual(result["checks"][3]["status"], "REVIEW")
+
     def test_missing_contract_key_blocks(self):
         product = self.load("ready")
         del product["description"]
@@ -41,3 +50,4 @@ class TrustGateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
