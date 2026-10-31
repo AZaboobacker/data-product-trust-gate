@@ -88,7 +88,7 @@ export function canIssueCertificate({ metadataDecision, sourceEvidence, controls
     && controls.every((control) => control.declared === true);
 }
 
-export function createCertificate({ metadata, checks, sourceEvidence, controls, id, now = Date.now() }) {
+export function createCertificate({ metadata, checks, sourceEvidence, controls, id, productId = "weather.city.observations", now = Date.now() }) {
   if (!id) throw new Error("A unique certificate ID is required.");
   const issuedAt = new Date(now);
   const expiresAt = new Date(now + CERTIFICATE_TTL_MS);
@@ -98,7 +98,7 @@ export function createCertificate({ metadata, checks, sourceEvidence, controls, 
     expires_at: expiresAt.toISOString(),
     policy_version: POLICY_VERSION,
     product: {
-      product_id: "weather.city.observations",
+      product_id: productId,
       owner: metadata.owner,
       description: metadata.description,
       declared_refresh_age_hours: metadata.refreshAgeHours,

@@ -24,6 +24,8 @@ let sourceEvidence = null;
 let certificate = null;
 let metadataResult;
 let animationToken = 0;
+let catalogAssets = [];
+let catalogAsset = null;
 
 function readMetadata() {
   return {
@@ -147,7 +149,10 @@ function setScenario(name) {
   byId("description").value = scenario.description;
   byId("age").value = scenario.refreshAgeHours;
   byId("fields").value = scenario.fields;
+  document.querySelector(".product-code").textContent = "weather.city.observations";
+  byId("source-heading").textContent = "Live source check";
   controls.forEach((checkbox) => { checkbox.checked = true; });
+  catalogAsset = null;
   sourceEvidence = null;
   setSourcePresentation({ status: "NOT RUN", title: "Waiting for a live check", text: "Scenario changed. Run a fresh live source check before issuing a certificate." });
   renderMetadata();
@@ -181,6 +186,16 @@ async function checkLiveSource() {
   button.innerHTML = '<span class="spin" aria-hidden="true">◌</span> Checking source…';
   setSourcePresentation({ status: "CHECKING", title: "Requesting current conditions", text: "Contacting the public Open-Meteo endpoint…" });
   try {
+    if (catalogAsset) {
+      setSourcePresentation({ status: "CHECKING", title: "Refreshing catalog evidence", text: "Checking that the selected asset is still available in OpenMetadata…" });
+      const response = await fetch(`/api/catalog/asset?id=${encodeURIComponent(catalogAsset.id)}`, { signal: AbortSignal.timeout(12_000), headers: { Accept: "application/json" } });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || `The catalog returned HTTP ${response.status}.`);
+      catalogAsset = payload.asset;
+      sourceEvidence = { pass: true, checkedAt: payload.checkedAt, endpoint: "OpenMetadata REST API", assetId: catalogAsset.id, fullyQualifiedName: catalogAsset.fullyQualifiedName, catalogVersion: payload.version };
+      setSourcePresentation({ status: "READY", title: "Catalog asset verified", text: `HTTP ${response.status}. The selected asset is still present in OpenMetadata. This verifies catalog availability, not the underlying table's data quality.`, details: `${catalogAsset.fullyQualifiedName} · OpenMetadata ${payload.version}` });
+      return;
+    }
     const url = new URL("https://api.open-meteo.com/v1/forecast");
     url.search = new URLSearchParams({
       latitude: "40.7128",
@@ -215,6 +230,68 @@ async function checkLiveSource() {
   }
 }
 
+async function connectCatalog() {
+  const button = byId("catalog-connect");
+  button.disabled = true;
+  button.textContent = "Connecting…";
+  byId("catalog-state").textContent = "Connecting";
+  catalogAssets = [];
+  catalogAsset = null;
+  byId("asset-picker-wrap").hidden = true;
+  byId("catalog-title").textContent = "Checking OpenMetadata";
+  byId("catalog-message").textContent = "Testing the API and loading table metadata…";
+  try {
+    const response = await fetch("/api/catalog/connect", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ baseUrl: byId("catalog-url").value, token: byId("catalog-token").value }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || `Connection failed (HTTP ${response.status}).`);
+    catalogAssets = payload.assets;
+    catalogAsset = null;
+    sourceEvidence = null;
+    const select = byId("catalog-asset");
+    select.replaceChildren(...catalogAssets.map((asset, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = `${asset.fullyQualifiedName}${asset.description ? ` — ${asset.description}` : ""}`;
+      return option;
+    }));
+    byId("asset-picker-wrap").hidden = catalogAssets.length === 0;
+    byId("catalog-state").textContent = `Connected · v${payload.version}`;
+    byId("catalog-title").textContent = `${catalogAssets.length} table asset${catalogAssets.length === 1 ? "" : "s"} loaded`;
+    byId("catalog-message").textContent = catalogAssets.length ? "Choose an asset to inspect its metadata and evaluate it with TrustGate." : "Connection succeeded, but this catalog returned no tables for your account.";
+    byId("catalog-result").className = "source-result READY";
+    setSourcePresentation({ status: "NOT RUN", title: "Choose a catalog asset", text: "After loading an asset into TrustGate, run a live check to verify it remains in the catalog." });
+  } catch (error) {
+    byId("catalog-state").textContent = "Connection failed";
+    byId("catalog-title").textContent = "Could not connect";
+    byId("catalog-message").textContent = error instanceof Error ? error.message : "Unknown connection error.";
+    byId("catalog-result").className = "source-result FAIL";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Connect and load assets";
+  }
+}
+
+function applyCatalogAsset() {
+  catalogAsset = catalogAssets[Number(byId("catalog-asset").value)];
+  if (!catalogAsset) return;
+  byId("owner").value = catalogAsset.owner || "";
+  byId("description").value = catalogAsset.description || "";
+  byId("fields").value = catalogAsset.fields.join(", ");
+  document.querySelector(".product-code").textContent = catalogAsset.fullyQualifiedName;
+  byId("age").value = "";
+  byId("catalog-message").textContent = catalogAsset.updatedAt
+    ? `Loaded ${catalogAsset.fullyQualifiedName}. Catalog metadata was updated ${new Date(catalogAsset.updatedAt).toLocaleString()}; this is not the data refresh time, so enter the declared data refresh age before certification.`
+    : `Loaded ${catalogAsset.fullyQualifiedName}. Enter the declared data refresh age before certification.`;
+  sourceEvidence = null;
+  setSourcePresentation({ status: "NOT RUN", title: "Waiting for a live catalog check", text: "Run a fresh check to verify the selected asset is still present in OpenMetadata." });
+  byId("source-heading").textContent = "OpenMetadata asset check";
+  renderMetadata();
+}
+
 function issueCertificate() {
   if (!updateEligibility()) return;
   const { normalized, checks } = metadataResult;
@@ -224,6 +301,7 @@ function issueCertificate() {
     sourceEvidence,
     controls: readControls(),
     id: `TG-${crypto.randomUUID().toUpperCase()}`,
+    productId: catalogAsset?.fullyQualifiedName || "weather.city.observations",
   });
   byId("cert-panel").className = "cert-panel READY";
   byId("cert-title").textContent = "Readiness certificate issued";
@@ -256,6 +334,8 @@ byId("check-source").addEventListener("click", checkLiveSource);
 byId("issue").addEventListener("click", issueCertificate);
 byId("download").addEventListener("click", downloadCertificate);
 byId("reset").addEventListener("click", () => setScenario("ready"));
+byId("catalog-connect").addEventListener("click", connectCatalog);
+byId("catalog-apply").addEventListener("click", applyCatalogAsset);
 document.querySelectorAll("[data-preset]").forEach((button) => button.addEventListener("click", () => setScenario(button.dataset.preset)));
 
 renderMetadata();

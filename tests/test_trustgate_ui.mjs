@@ -85,6 +85,12 @@ test("certificate records policy scope and expires in 24 hours", () => {
   assert.equal(certificateIsCurrent(certificate, now + 24 * 60 * 60_000), false);
 });
 
+test("catalog certificates retain the selected catalog asset identity", () => {
+  const result = evaluateMetadata(ready);
+  const cert = createCertificate({ metadata: result.normalized, checks: result.checks, sourceEvidence: evidence, controls, id: "TG-CATALOG", productId: "sample.claims", now });
+  assert.equal(cert.product.product_id, "sample.claims");
+});
+
 test("every UI script target exists exactly once in the page", () => {
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
   const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
@@ -98,4 +104,14 @@ test("UI includes responsive, reduced-motion, and keyboard-focus treatments", ()
   assert.match(html, /prefers-reduced-motion:\s*reduce/);
   assert.match(html, /:focus-visible/);
   assert.match(html, /<a class="skip" href="#main">/);
+});
+
+test("UI exposes a read-only OpenMetadata connection, asset picker, and live recheck", () => {
+  for (const id of ["catalog-url", "catalog-token", "catalog-connect", "catalog-asset", "catalog-apply"]) {
+    assert.ok(html.includes(`id="${id}"`), `Missing catalog UI control #${id}`);
+  }
+  assert.match(uiScript, /\/api\/catalog\/connect/);
+  assert.match(uiScript, /\/api\/catalog\/asset\?/);
+  assert.match(uiScript, /function applyCatalogAsset/);
+  assert.match(html, /read-only OpenMetadata integration/i);
 });

@@ -13,6 +13,9 @@
     @media(max-width:620px){.topbar{height:58px}.topbar-inner{padding:0 17px}.top-note{font-size:10px}.wrap{padding:29px 16px 48px}.hero{gap:17px;margin-bottom:20px}.hero h1{font-size:32px}.hero-copy{font-size:13px}.board{display:flex;flex-direction:column}.left-stack,.right-stack{width:100%}.right-stack{display:grid;grid-template-columns:1fr}.card{padding:17px;border-radius:15px}.scope{padding:0 17px 24px}.scope-inner{flex-direction:column;gap:5px}.form-grid{grid-template-columns:1fr}.field.wide{grid-column:auto}.hero-badge{font-size:10px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
   </style>
+  <style>
+    #asset-picker-wrap[hidden]{display:none!important}#catalog-token{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.catalog-help{font-size:12px;color:var(--muted)}
+  </style>
 </head>
 <body>
   <a class="skip" href="#main">Skip to main content</a>
@@ -25,6 +28,13 @@
 
     <div class="board">
       <div class="left-stack">
+        <section class="card" aria-labelledby="catalog-heading">
+          <div class="card-head"><div><h2 class="card-title" id="catalog-heading">Connect a catalog</h2><p class="card-sub">Read-only OpenMetadata integration. Credentials stay in this local server process and are not saved.</p></div><span class="micro-tag">OpenMetadata</span></div>
+          <div class="form-grid"><div class="field wide"><label for="catalog-url">OpenMetadata URL</label><input class="input" id="catalog-url" value="https://sandbox.open-metadata.org" autocomplete="url"></div><div class="field wide"><label for="catalog-token">Personal access token</label><input class="input" id="catalog-token" type="password" autocomplete="off" placeholder="Paste a read-only token"></div></div>
+          <div class="actions"><button class="btn" id="catalog-connect" type="button">Connect and load assets</button><span class="micro-tag" id="catalog-state">Not connected</span></div>
+          <div class="source-result" id="catalog-result" aria-live="polite"><strong id="catalog-title">Connect to OpenMetadata</strong><p id="catalog-message">Use a read-only token from your OpenMetadata account. The public sandbox requires authentication for catalog data.</p></div>
+          <div class="field" id="asset-picker-wrap" hidden><label for="catalog-asset">Catalog asset</label><select class="input" id="catalog-asset"></select><div class="actions"><button class="btn btn-quiet" id="catalog-apply" type="button">Load asset into TrustGate</button></div></div>
+        </section>
         <section class="card" aria-labelledby="metadata-heading">
           <div class="card-head"><div><h2 class="card-title" id="metadata-heading">Product metadata</h2><p class="card-sub">Edit the synthetic product contract. Results update as you type.</p></div><span class="micro-tag">Editable</span></div>
           <div class="product-line"><span class="product-id">Product identifier</span><code class="product-code">weather.city.observations</code></div>

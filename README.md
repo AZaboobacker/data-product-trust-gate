@@ -1,18 +1,18 @@
 # TrustGate — Data Product Readiness Demo
 
-TrustGate is an independent portfolio project that makes data-product readiness decisions inspectable. It uses fictional metadata and a public city-weather API; it has no employer branding, private data, credentials, or platform integrations.
+TrustGate is an independent portfolio project that makes data-product readiness decisions inspectable. It supports fictional metadata, a public city-weather API, and a read-only OpenMetadata catalog adapter; it has no employer branding or private data.
 
 ## Run the demo
 
-Requirements: Python 3 for the local web server and a modern browser. No package install or API key is needed.
+Requirements: Python 3.10+ and a modern browser. No package install is needed. OpenMetadata connection requires a Personal Access Token with read access.
 
 From the repository directory, run:
 
 ```bash
-python3 -m http.server 8000
+python3 trustgate_server.py
 ```
 
-Open [http://localhost:8000](http://localhost:8000). Stop the server with **Ctrl+C**. Use `python` instead of `python3` on Windows if needed. Internet access is required only for the live Open-Meteo check; metadata checks and scenario presets work offline.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Stop the server with **Ctrl+C**. Use `python` instead of `python3` on Windows if needed. The local server binds only to loopback. Metadata checks and scenario presets work offline.
 
 ### Demo walkthrough
 
@@ -22,6 +22,15 @@ Open [http://localhost:8000](http://localhost:8000). Stop the server with **Ctrl
 4. Choose **Check live source** to call Open-Meteo for current conditions in New York. A passing result requires an HTTP success, the expected current fields and numeric values, and a recent timestamp. Source evidence must be refreshed after 15 minutes.
 5. With ready metadata, fresh passing source evidence, and all five self-declared controls selected, choose **Issue readiness certificate** and **Download JSON**.
 6. Edit metadata or a control after issuance: the certificate is invalidated. The demo certificate expires after 24 hours.
+
+### Connect an OpenMetadata catalog
+
+1. Open **Connect a catalog**. The endpoint defaults to the public OpenMetadata sandbox (`https://sandbox.open-metadata.org`).
+2. Paste a Personal Access Token for an account that can read tables, then choose **Connect and load assets**. The shared sandbox requires authentication for catalog data. Create the token in your OpenMetadata profile's access-token settings.
+3. Choose a table and select **Load asset into TrustGate**. TrustGate maps its catalog owner, description, and columns into the editable metadata checks. The catalog's `updatedAt` value is shown as metadata context; it is not treated as the table's data refresh time.
+4. Choose **Check live source** to re-fetch the asset by ID. This verifies that the catalog entry is still present; it does not test the underlying table data or prove its quality.
+
+The integration is read-only. The token is sent to the local TrustGate server, held in process memory only, and cleared when the server stops. It is not saved in browser storage or written to disk. The generic adapter currently targets OpenMetadata's REST API; other catalogs need an adapter implementation.
 
 ## What the three evidence layers mean
 
