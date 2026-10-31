@@ -120,6 +120,7 @@ function invalidateCertificate() {
 }
 
 function renderMetadata() {
+  animationToken += 1;
   metadataResult = evaluateMetadata(readMetadata());
   renderChecks(metadataResult.checks);
   const { decision } = metadataResult;
