@@ -1,51 +1,71 @@
-import {
-  canIssueCertificate,
-  certificateIsCurrent,
-  createCertificate,
-  evaluateMetadata,
-  hasFreshPassingEvidence,
-  inspectSourceResponse,
-} from "./trustgate-core.mjs";
+import { evaluateMetadata, evaluatePolicy, evaluationStaleness, hasFreshPassingEvidence, inspectSourceResponse, stableFingerprint } from "./trustgate-core.mjs";
 
-const byId = (id) => document.getElementById(id);
-const controls = [...document.querySelectorAll("#controls input[type=checkbox]")];
-const initial = {
+const $ = (id) => document.getElementById(id);
+const evidenceChecks = [...document.querySelectorAll("#evidence-options input")];
+const INITIAL_METADATA = {
   owner: "Climate Data Team",
   description: "Hourly weather data for a selected city, including temperature, humidity, and precipitation.",
   refreshAgeHours: "2",
   fields: "city, observed_at, temperature_c, humidity_pct, precipitation_mm, wind_speed_kph, weather_code, source",
 };
-const scenarios = {
-  ready: initial,
-  review: { ...initial, refreshAgeHours: "36" },
-  blocked: { ...initial, owner: "", fields: "city, observed_at, temperature_c" },
-};
+const POLICY_KEY = "trustgate.activePolicy.v2";
+let status = { mode: "demo", catalog: "Synthetic demo catalog", readOnly: true };
+let policies = [];
+let policy;
+let mockAssets = [];
+let openMetadataAssets = [];
+let mockAsset;
+let omAsset;
+let targetSource = "mock";
+let selectedAsset = null;
 let sourceEvidence = null;
-let certificate = null;
-let metadataResult;
+let evaluation = null;
+let decisionCertificate = null;
+let catalogChanged = false;
 let animationToken = 0;
-let catalogAssets = [];
-let catalogAsset = null;
+
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, { cache: "no-store", ...options });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `Request failed (HTTP ${response.status}).`);
+  return payload;
+}
 
 function readMetadata() {
+  const fields = $("fields").value.split(",").map((value) => value.trim()).filter(Boolean);
   return {
-    owner: byId("owner").value,
-    description: byId("description").value,
-    refreshAgeHours: byId("age").value,
-    fields: byId("fields").value,
+    product_id: selectedAsset?.product_id || selectedAsset?.fullyQualifiedName || "weather.city.observations",
+    name: selectedAsset?.name || "City Weather Observations",
+    owner: $("owner").value.trim(),
+    description: $("description").value.trim(),
+    refreshAgeHours: $("age").value,
+    fields,
+    source: selectedAsset?.source || (targetSource === "mock" ? "TrustGate synthetic catalog" : "OpenMetadata"),
+    fullyQualifiedName: selectedAsset?.fullyQualifiedName || "weather.city.observations",
+    updatedAt: selectedAsset?.updatedAt || "",
   };
 }
 
-function readControls() {
-  return controls.map((checkbox) => ({
-    control: checkbox.value,
-    declared: checkbox.checked,
-    label: checkbox.closest("label").textContent.trim(),
-  }));
+function setPill(id, value) {
+  const node = $(id);
+  const tone = value === "ISSUED" ? "READY" : value === "EXPIRED" || value === "STALE" ? "REVIEW" : value;
+  node.className = `pill${["READY", "REVIEW", "BLOCKED", "FAIL"].includes(tone) ? ` ${tone}` : ""}`;
+  node.textContent = value;
 }
 
-function renderChecks(checks) {
-  const list = byId("checks");
+function setSourcePresentation({ status: resultStatus, title, text, details = "" }) {
+  const result = $("source-result");
+  result.className = `source-result${resultStatus === "READY" ? " READY" : resultStatus === "REVIEW" ? " REVIEW" : resultStatus === "FAIL" ? " FAIL" : ""}`;
+  $("source-title").textContent = title;
+  $("source-text").textContent = text;
+  $("source-details").textContent = details;
+  $("source-badge").textContent = resultStatus === "READY" ? "Verified" : resultStatus === "FAIL" ? "Failed" : resultStatus;
+  setPill("layer-source", resultStatus === "READY" ? "PASS" : resultStatus === "FAIL" ? "FAIL" : resultStatus === "REVIEW" ? "REVIEW" : "NOT RUN");
+  renderCertificateAvailability();
+}
+
+function renderMetadataChecks(checks) {
+  const list = $("checks");
   const fragment = document.createDocumentFragment();
   for (const check of checks) {
     const row = document.createElement("li");
@@ -56,298 +76,367 @@ function renderChecks(checks) {
     icon.setAttribute("aria-hidden", "true");
     icon.textContent = check.status === "PASS" ? "✓" : check.status === "REVIEW" ? "!" : "×";
     const copy = document.createElement("div");
-    const name = document.createElement("div");
-    name.className = "check-name";
-    name.textContent = check.name;
-    const evidence = document.createElement("div");
-    evidence.className = "check-evidence";
-    evidence.textContent = check.evidence;
-    copy.append(name, evidence);
-    const status = document.createElement("span");
-    status.className = "check-status";
-    status.textContent = check.status;
-    row.append(icon, copy, status);
+    const label = document.createElement("div");
+    label.className = "check-name";
+    label.textContent = check.name;
+    const detail = document.createElement("div");
+    detail.className = "check-evidence";
+    detail.textContent = check.evidence;
+    copy.append(label, detail);
+    const state = document.createElement("span");
+    state.className = "check-status";
+    state.textContent = check.status;
+    row.append(icon, copy, state);
     fragment.append(row);
   }
   list.replaceChildren(fragment);
 }
 
-function setPill(id, value) {
-  const node = byId(id);
-  const tone = value === "ISSUED" ? "READY" : value === "EXPIRED" ? "REVIEW" : value;
-  node.className = `pill${["READY", "REVIEW", "BLOCKED", "FAIL"].includes(tone) ? ` ${tone}` : ""}`;
-  node.textContent = value;
-}
-
-function setSourcePresentation({ status, title, text, details = "" }) {
-  const result = byId("source-result");
-  result.className = `source-result${status === "READY" ? " READY" : status === "REVIEW" ? " REVIEW" : status === "FAIL" ? " FAIL" : ""}`;
-  byId("source-title").textContent = title;
-  byId("source-text").textContent = text;
-  byId("source-details").textContent = details;
-  const badge = byId("source-badge");
-  badge.textContent = status === "READY" ? "Verified" : status === "REVIEW" ? "Needs review" : status === "FAIL" ? "Failed" : status;
-  setPill("layer-source", status === "READY" ? "PASS" : status === "FAIL" ? "FAIL" : status === "REVIEW" ? "REVIEW" : "NOT RUN");
-}
-
-function updateEligibility() {
-  const ready = canIssueCertificate({
-    metadataDecision: metadataResult.decision,
-    sourceEvidence,
-    controls: readControls(),
-  });
-  byId("issue").disabled = !ready;
-  if (sourceEvidence?.pass && !hasFreshPassingEvidence(sourceEvidence)) {
-    byId("source-badge").textContent = "Check expired";
-    setPill("layer-source", "REVIEW");
-    byId("source-result").className = "source-result REVIEW";
-    byId("source-title").textContent = "Source evidence needs refreshing";
-    byId("source-text").textContent = "This evidence is older than 15 minutes. Run the live source check again before issuing a certificate.";
-  }
-  return ready;
-}
-
-function invalidateCertificate() {
-  const hadCertificate = Boolean(certificate);
-  certificate = null;
-  byId("download").disabled = true;
-  byId("cert-panel").className = "cert-panel";
-  byId("cert-title").textContent = "No current certificate";
-  byId("cert-text").textContent = hadCertificate
-    ? "This certificate was invalidated by a metadata or control change. Re-run checks and issue a new one."
-    : "Run the live source check and meet the decision rule to create a certificate.";
-  byId("cert-id").textContent = "";
-  setPill("layer-cert", "NOT ISSUED");
-  updateEligibility();
-}
-
 function renderMetadata() {
   animationToken += 1;
-  metadataResult = evaluateMetadata(readMetadata());
-  renderChecks(metadataResult.checks);
-  const { decision } = metadataResult;
-  const summary = byId("meta-summary");
-  summary.className = `meta-summary ${decision}`;
-  byId("summary-icon").textContent = decision === "READY" ? "✓" : decision === "REVIEW" ? "!" : "×";
-  byId("meta-title").textContent = `Metadata attestation: ${decision}`;
-  byId("meta-text").textContent = decision === "READY"
-    ? "All sample metadata rules pass."
-    : decision === "REVIEW"
-      ? "The product has no blocking gaps, but freshness needs attention."
-      : "Resolve the blocking metadata gaps to continue.";
-  byId("meta-state").className = `summary-state ${decision}`;
-  byId("meta-state").textContent = decision;
+  const result = evaluateMetadata({ ...readMetadata(), fields: $("fields").value });
+  renderMetadataChecks(result.checks);
+  const { decision } = result;
+  $("meta-summary").className = `meta-summary ${decision}`;
+  $("summary-icon").textContent = decision === "READY" ? "✓" : decision === "REVIEW" ? "!" : "×";
+  $("meta-title").textContent = `Metadata attestation: ${decision}`;
+  $("meta-text").textContent = decision === "READY" ? "All sample metadata rules pass." : decision === "REVIEW" ? "The metadata is complete, but freshness needs attention." : "Resolve the blocking metadata gaps to continue.";
+  $("meta-state").className = `summary-state ${decision}`;
+  $("meta-state").textContent = decision;
   setPill("layer-meta", decision);
-  byId("age").setAttribute("aria-invalid", String(!Number.isFinite(Number(byId("age").value)) || Number(byId("age").value) < 0));
-  invalidateCertificate();
+  $("age").setAttribute("aria-invalid", String(!Number.isFinite(Number($("age").value)) || Number($("age").value) < 0));
+  renderEvaluation();
 }
 
-function setScenario(name) {
-  const scenario = scenarios[name];
-  if (!scenario) return;
-  byId("owner").value = scenario.owner;
-  byId("description").value = scenario.description;
-  byId("age").value = scenario.refreshAgeHours;
-  byId("fields").value = scenario.fields;
-  document.querySelector(".product-code").textContent = "weather.city.observations";
-  byId("source-heading").textContent = "Live source check";
-  controls.forEach((checkbox) => { checkbox.checked = true; });
-  catalogAsset = null;
-  sourceEvidence = null;
-  setSourcePresentation({ status: "NOT RUN", title: "Waiting for a live check", text: "Scenario changed. Run a fresh live source check before issuing a certificate." });
+function renderEvaluation() {
+  const currentMetadata = readMetadata();
+  const stale = evaluationStaleness(evaluation, policy, currentMetadata);
+  const banner = $("evaluation-banner");
+  if (!evaluation) {
+    banner.className = "evaluation-banner";
+    $("evaluation-title").textContent = "No runtime evaluation yet";
+    $("evaluation-message").textContent = "Choose a catalog source, then evaluate the current asset against the active policy.";
+    $("evaluation-time").textContent = "Not evaluated";
+    $("evaluation-id").textContent = "";
+    $("policy-checks").replaceChildren();
+    $("decision-reasons").innerHTML = "<li>Runtime evaluation has not been run.</li>";
+    setPill("layer-cert", "NOT ISSUED");
+    renderCertificateAvailability();
+    return;
+  }
+  const shownStatus = stale.stale ? "STALE" : evaluation.status;
+  banner.className = `evaluation-banner ${shownStatus}`;
+  $("evaluation-title").textContent = stale.stale ? "Previous decision is stale" : `${evaluation.status}: ${policy.name}`;
+  $("evaluation-message").textContent = stale.stale ? stale.reason : `Re-evaluate by ${new Date(evaluation.expires_at).toLocaleString()} to refresh the runtime decision.`;
+  $("evaluation-time").textContent = new Date(evaluation.checked_at).toLocaleString();
+  $("evaluation-id").textContent = evaluation.evaluation_id;
+  const fragment = document.createDocumentFragment();
+  for (const check of evaluation.checks) {
+    const row = document.createElement("li");
+    row.className = `check-row ${check.status === "BLOCKED" ? "fail" : check.status.toLowerCase()}`;
+    const icon = document.createElement("span"); icon.className = "check-icon"; icon.textContent = check.status === "PASS" ? "✓" : check.status === "REVIEW" ? "!" : "×";
+    const copy = document.createElement("div"); const label = document.createElement("div"); label.className = "check-name"; label.textContent = check.label;
+    const detail = document.createElement("div"); detail.className = "check-evidence"; detail.textContent = check.detail; copy.append(label, detail);
+    const badge = document.createElement("span"); badge.className = "check-status"; badge.textContent = check.status;
+    row.append(icon, copy, badge); fragment.append(row);
+  }
+  $("policy-checks").replaceChildren(fragment);
+  const reasons = evaluation.reasons.length ? evaluation.reasons : ["Every required check passed under the active policy."];
+  const reasonNodes = reasons.map((reason) => { const li = document.createElement("li"); li.textContent = reason; return li; });
+  $("decision-reasons").replaceChildren(...reasonNodes);
+  setPill("layer-cert", stale.stale ? "STALE" : evaluation.status);
+  renderCertificateAvailability();
+}
+
+function buildEvidence() {
+  const freshSource = hasFreshPassingEvidence(sourceEvidence);
+  const omSelected = targetSource === "openmetadata" && selectedAsset?.source === "OpenMetadata";
+  const ttl = Math.max(1, Number(policy?.certificateTtlMinutes) || 60) * 60_000;
+  const expiresAt = new Date(Date.now() + ttl).toISOString();
+  return {
+    metadata_snapshot: { available: true, source: "TrustGate runtime snapshot", capturedAt: new Date().toISOString(), expiresAt },
+    catalog_source: { available: Boolean(selectedAsset), source: selectedAsset?.source || "No catalog asset loaded", assetId: selectedAsset?.fullyQualifiedName || "", capturedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 15 * 60_000).toISOString() },
+    openmetadata_read_only: { available: omSelected, source: omSelected ? "OpenMetadata read-only API" : "Not an OpenMetadata-selected asset", assetId: omSelected ? selectedAsset.fullyQualifiedName : "", capturedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 15 * 60_000).toISOString() },
+    live_source_check: { available: freshSource, source: sourceEvidence?.endpoint || "Open-Meteo", capturedAt: sourceEvidence?.checkedAt || "", expiresAt: sourceEvidence?.checkedAt ? new Date(Date.parse(sourceEvidence.checkedAt) + 15 * 60_000).toISOString() : "" },
+  };
+}
+
+function evaluateRuntime() {
+  const metadata = readMetadata();
+  const evidence = buildEvidence();
+  evaluation = evaluatePolicy(metadata, policy, { evidence });
+  decisionCertificate = null;
+  $("cert-panel").className = "cert-panel";
+  $("cert-title").textContent = evaluation.status === "READY" ? "Current decision is certificate-eligible" : "No readiness certificate issued";
+  $("cert-text").textContent = evaluation.status === "READY" ? "This time-stamped result is valid only under the active policy and evidence window." : "A certificate is issued only for a READY decision with all required evidence.";
+  $("cert-id").textContent = "";
+  renderEvaluation();
+}
+
+function renderCertificateAvailability() {
+  const current = evaluation && !evaluationStaleness(evaluation, policy, readMetadata()).stale && evaluation.status === "READY";
+  $("download-certificate").disabled = !current || !decisionCertificate;
+  $("download-trace").disabled = !current;
+}
+
+function applyPolicyToForm() {
+  $("policy-name").value = policy.name;
+  $("policy-version").textContent = `v${policy.version}`;
+  $("require-owner").checked = policy.metadata.requireOwner;
+  $("require-description").checked = policy.metadata.requireDescription;
+  $("require-schema").checked = policy.metadata.requireSchemaFields;
+  $("minimum-fields").value = policy.metadata.minimumSchemaFields;
+  $("maximum-age").value = policy.metadata.maximumRefreshAgeHours;
+  for (const [key, selectId] of Object.entries({ owner: "outcome-owner", description: "outcome-description", schemaFields: "outcome-schemaFields", freshness: "outcome-freshness", requiredEvidence: "outcome-requiredEvidence" })) $(selectId).value = policy.failureOutcomes[key];
+  evidenceChecks.forEach((input) => { input.checked = policy.requiredEvidence.includes(input.value); });
+  $("certificate-ttl").value = policy.certificateTtlMinutes;
+  $("policy-dirty").textContent = "Policy unchanged";
+}
+
+function readPolicyForm() {
+  const next = structuredClone(policy);
+  next.name = $("policy-name").value.trim() || "Untitled policy";
+  next.metadata = {
+    requireOwner: $("require-owner").checked,
+    requireDescription: $("require-description").checked,
+    requireSchemaFields: $("require-schema").checked,
+    minimumSchemaFields: Math.max(0, Number($("minimum-fields").value) || 0),
+    maximumRefreshAgeHours: Math.max(0, Number($("maximum-age").value) || 0),
+  };
+  next.failureOutcomes = {
+    owner: $("outcome-owner").value,
+    description: $("outcome-description").value,
+    schemaFields: $("outcome-schemaFields").value,
+    freshness: $("outcome-freshness").value,
+    requiredEvidence: $("outcome-requiredEvidence").value,
+  };
+  next.requiredEvidence = evidenceChecks.filter((input) => input.checked).map((input) => input.value);
+  next.certificateTtlMinutes = Math.max(1, Number($("certificate-ttl").value) || 1);
+  return next;
+}
+
+function incrementVersion(version) {
+  const parts = String(version || "1.0.0").split(".").map((x) => Number(x) || 0);
+  parts[2] += 1;
+  return parts.join(".");
+}
+
+function applyPolicy() {
+  const next = readPolicyForm();
+  if (!Number.isFinite(next.metadata.minimumSchemaFields) || !Number.isFinite(next.metadata.maximumRefreshAgeHours)) return;
+  next.version = incrementVersion(policy.version);
+  policy = next;
+  localStorage.setItem(POLICY_KEY, JSON.stringify(policy));
+  applyPolicyToForm();
+  $("policy-dirty").textContent = "Saved locally · new policy version";
+  renderEvaluation();
+}
+
+function setPolicyById(id) {
+  const chosen = policies.find((item) => item.id === id);
+  if (!chosen) return;
+  policy = structuredClone(chosen);
+  localStorage.setItem(POLICY_KEY, JSON.stringify(policy));
+  applyPolicyToForm();
+  renderEvaluation();
+}
+
+function resetPolicy() {
+  const baseline = policies[0];
+  if (!baseline) return;
+  localStorage.removeItem(POLICY_KEY);
+  policy = structuredClone(baseline);
+  applyPolicyToForm();
+  renderEvaluation();
+}
+
+function selectOptions(select, assets, placeholder) {
+  select.replaceChildren();
+  if (!assets.length) {
+    const option = document.createElement("option"); option.value = ""; option.textContent = placeholder; select.append(option); return;
+  }
+  for (const asset of assets) {
+    const option = document.createElement("option");
+    option.value = asset.id || asset.fullyQualifiedName;
+    option.textContent = asset.name || asset.fullyQualifiedName || asset.id;
+    select.append(option);
+  }
+}
+
+async function refreshCatalog() {
+  $("refresh-catalog").disabled = true;
+  $("refresh-indicator").textContent = "Refreshing…";
+  try {
+    const mock = await requestJson("/api/assets?source=mock");
+    mockAssets = mock.assets || [];
+    selectOptions($("mock-asset"), mockAssets, "No synthetic assets found");
+    mockAsset = mockAssets.find((asset) => asset.id === $("mock-asset").value) || mockAssets[0];
+    renderCompare();
+    if (status.mode === "connected") {
+      const om = await requestJson("/api/assets?source=openmetadata");
+      openMetadataAssets = om.assets || [];
+      selectOptions($("om-asset"), openMetadataAssets, "No tables visible to this token");
+      $("om-asset").disabled = !openMetadataAssets.length;
+      $("use-openmetadata").disabled = !openMetadataAssets.length;
+      omAsset = openMetadataAssets.find((asset) => asset.id === $("om-asset").value || asset.fullyQualifiedName === $("om-asset").value) || openMetadataAssets[0];
+      renderCompare();
+      $("refresh-indicator").textContent = `${openMetadataAssets.length} assets loaded`;
+    } else {
+      $("om-asset").disabled = true;
+      $("use-openmetadata").disabled = true;
+      $("refresh-indicator").textContent = "Demo catalog loaded";
+    }
+    if (!selectedAsset) useAsset("mock", mockAsset, false);
+  } catch (error) {
+    $("refresh-indicator").textContent = "Refresh failed";
+    $("mode-description").textContent = error.message;
+  } finally {
+    $("refresh-catalog").disabled = false;
+  }
+}
+
+function compareSide(node, title, asset, fallback) {
+  node.replaceChildren();
+  const heading = document.createElement("h3"); heading.textContent = title; node.append(heading);
+  if (!asset) { const p = document.createElement("p"); p.className = "subtle"; p.textContent = fallback; node.append(p); return; }
+  const name = document.createElement("div"); name.className = "compare-asset"; name.textContent = asset.name || asset.fullyQualifiedName; node.append(name);
+  const origin = document.createElement("div"); origin.className = "compare-origin"; origin.textContent = `${asset.source} · ${asset.sourceType || "asset"} · ${asset.fullyQualifiedName || asset.id}`; node.append(origin);
+  const fields = [
+    ["Owner", asset.owner || "Not set"],
+    ["Description", asset.description || "Not set"],
+    ["Fields", (asset.fields || []).join(", ") || "No schema fields"],
+    ["Refresh age", asset.refreshAgeHours === "" || asset.refreshAgeHours == null ? "Unavailable" : `${asset.refreshAgeHours}h`],
+    ["Updated", asset.updatedAt || "Not provided"],
+    ["Evidence", (asset.sourceEvidence || []).join(" · ") || "Catalog record"],
+  ];
+  for (const [labelText, valueText] of fields) {
+    const row = document.createElement("div"); row.className = "compare-row";
+    const label = document.createElement("span"); label.textContent = labelText;
+    const value = document.createElement("span"); value.textContent = valueText;
+    row.append(label, value); node.append(row);
+  }
+}
+
+function renderCompare() {
+  compareSide($("mock-compare"), "Synthetic catalog", mockAsset, "No mock asset selected.");
+  compareSide($("om-compare"), "OpenMetadata", omAsset, status.mode === "connected" ? "No OpenMetadata asset selected." : "Connected mode is off. Configure the local server to compare catalog assets.");
+}
+
+function useAsset(source, asset, refreshForm = true) {
+  if (!asset) return;
+  targetSource = source;
+  selectedAsset = asset;
+  catalogChanged = false;
+  if (refreshForm) {
+    $("owner").value = asset.owner || "";
+    $("description").value = asset.description || "";
+    $("age").value = asset.refreshAgeHours ?? "";
+    $("fields").value = (asset.fields || []).join(", ");
+  }
   renderMetadata();
+}
+
+function downloadJson(filename, content) {
+  const blob = new Blob([`${JSON.stringify(content, null, 2)}\n`], { type: "application/json" });
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement("a"); anchor.href = href; anchor.download = filename; document.body.append(anchor); anchor.click(); anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(href), 1000);
+}
+
+function issueDecisionCertificate() {
+  if (!evaluation || evaluation.status !== "READY" || evaluationStaleness(evaluation, policy, readMetadata()).stale) return;
+  decisionCertificate = {
+    certificate_type: "TrustGate runtime decision record",
+    certificate_id: evaluation.evaluation_id,
+    decision: evaluation.status,
+    policy: { id: policy.id, name: policy.name, version: policy.version, fingerprint: evaluation.policy_fingerprint },
+    asset: { id: evaluation.asset.product_id, fingerprint: evaluation.asset_fingerprint, source: selectedAsset?.source || evaluation.asset.source },
+    checked_at: evaluation.checked_at,
+    valid_until: evaluation.expires_at,
+    evidence: evaluation.evidence,
+    scope: "Time-stamped portfolio-demo decision. Not a permanent certification, production control, security approval, access grant, or regulatory certification.",
+  };
+  $("cert-panel").className = "cert-panel READY";
+  $("cert-title").textContent = "Runtime decision certificate issued";
+  $("cert-text").textContent = `Valid under policy ${policy.version} until ${new Date(evaluation.expires_at).toLocaleString()}. Any policy, asset, or evidence change makes it stale.`;
+  $("cert-id").textContent = evaluation.evaluation_id;
+  renderCertificateAvailability();
 }
 
 async function runAnimatedChecks() {
-  const button = byId("run-meta");
-  const token = ++animationToken;
-  button.disabled = true;
-  button.setAttribute("aria-busy", "true");
+  const button = $("run-meta"); const token = ++animationToken; button.disabled = true;
   const rows = [...document.querySelectorAll("#checks .check-row")];
   for (const row of rows) {
     if (token !== animationToken) break;
-    row.classList.add("checking");
-    const spinner = document.createElement("span");
-    spinner.className = "spin";
-    spinner.setAttribute("aria-hidden", "true");
-    spinner.textContent = "◌";
-    row.querySelector(".check-icon").replaceChildren(spinner);
-    row.querySelector(".check-status").textContent = "CHECKING";
-    await new Promise((resolve) => setTimeout(resolve, 260));
+    row.classList.add("checking"); row.querySelector(".check-status").textContent = "CHECKING";
+    await new Promise((resolve) => setTimeout(resolve, 240));
   }
-  if (token === animationToken) renderMetadata();
-  button.disabled = false;
-  button.removeAttribute("aria-busy");
+  renderMetadata(); button.disabled = false;
 }
 
 async function checkLiveSource() {
-  const button = byId("check-source");
-  button.disabled = true;
-  button.innerHTML = '<span class="spin" aria-hidden="true">◌</span> Checking source…';
+  const button = $("check-source"); button.disabled = true; button.textContent = "Checking live source…";
   setSourcePresentation({ status: "CHECKING", title: "Requesting current conditions", text: "Contacting the public Open-Meteo endpoint…" });
   try {
-    if (catalogAsset) {
-      setSourcePresentation({ status: "CHECKING", title: "Refreshing catalog evidence", text: "Checking that the selected asset is still available in OpenMetadata…" });
-      const response = await fetch(`/api/catalog/asset?id=${encodeURIComponent(catalogAsset.id)}`, { signal: AbortSignal.timeout(12_000), headers: { Accept: "application/json" } });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || `The catalog returned HTTP ${response.status}.`);
-      catalogAsset = payload.asset;
-      sourceEvidence = { pass: true, checkedAt: payload.checkedAt, endpoint: "OpenMetadata REST API", assetId: catalogAsset.id, fullyQualifiedName: catalogAsset.fullyQualifiedName, catalogVersion: payload.version };
-      setSourcePresentation({ status: "READY", title: "Catalog asset verified", text: `HTTP ${response.status}. The selected asset is still present in OpenMetadata. This verifies catalog availability, not the underlying table's data quality.`, details: `${catalogAsset.fullyQualifiedName} · OpenMetadata ${payload.version}` });
-      return;
-    }
     const url = new URL("https://api.open-meteo.com/v1/forecast");
-    url.search = new URLSearchParams({
-      latitude: "40.7128",
-      longitude: "-74.0060",
-      current: "temperature_2m,relative_humidity_2m,precipitation",
-      timezone: "UTC",
-      forecast_days: "1",
-    });
+    url.search = new URLSearchParams({ latitude: "40.7128", longitude: "-74.0060", current: "temperature_2m,relative_humidity_2m,precipitation", timezone: "UTC", forecast_days: "1" });
     const response = await fetch(url, { signal: AbortSignal.timeout(12_000), headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error(`The endpoint returned HTTP ${response.status}.`);
-    const payload = await response.json();
-    sourceEvidence = inspectSourceResponse(payload);
-    const v = sourceEvidence.values;
-    const details = `${v.temperatureC}°C  ·  ${v.relativeHumidityPct}% RH  ·  ${v.precipitationMm ?? "—"} mm precipitation`;
-    setSourcePresentation({
-      status: "READY",
-      title: "Current source response verified",
-      text: `HTTP ${response.status}. Required current fields are present and the sample timestamp is recent. This confirms response availability and shape—not the correctness of the full dataset.`,
-      details: `${sourceEvidence.sampleTime} UTC  ·  ${details}`,
-    });
+    sourceEvidence = inspectSourceResponse(await response.json());
+    setSourcePresentation({ status: "READY", title: "Current source response verified", text: `HTTP ${response.status}. Current fields are present and timestamp is recent; this is source-response evidence only.`, details: `${sourceEvidence.sampleTime} UTC · ${sourceEvidence.values.temperatureC}°C · ${sourceEvidence.values.relativeHumidityPct}% RH` });
   } catch (error) {
-    sourceEvidence = { pass: false, checkedAt: new Date().toISOString(), error: error instanceof Error ? error.message : "Unknown source error" };
-    setSourcePresentation({
-      status: "FAIL",
-      title: "Live source verification failed",
-      text: `${sourceEvidence.error} Metadata results remain available, but source evidence is not passing.`,
-    });
-  } finally {
-    button.disabled = false;
-    button.innerHTML = '<span aria-hidden="true">↻</span> Check live source';
-    updateEligibility();
-  }
+    sourceEvidence = { pass: false, checkedAt: new Date().toISOString(), error: error.message || "Unknown source error" };
+    setSourcePresentation({ status: "FAIL", title: "Live source verification failed", text: `${sourceEvidence.error} It will not count as passing evidence.` });
+  } finally { button.disabled = false; button.textContent = "↻ Check live source"; renderEvaluation(); }
 }
 
-async function connectCatalog() {
-  const button = byId("catalog-connect");
-  button.disabled = true;
-  button.textContent = "Connecting…";
-  byId("catalog-state").textContent = "Connecting";
-  catalogAssets = [];
-  catalogAsset = null;
-  byId("asset-picker-wrap").hidden = true;
-  byId("catalog-title").textContent = "Checking OpenMetadata";
-  byId("catalog-message").textContent = "Testing the API and loading table metadata…";
+async function init() {
   try {
-    const response = await fetch("/api/catalog/connect", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baseUrl: byId("catalog-url").value, token: byId("catalog-token").value }),
-      signal: AbortSignal.timeout(20_000),
-    });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || `Connection failed (HTTP ${response.status}).`);
-    catalogAssets = payload.assets;
-    catalogAsset = null;
-    sourceEvidence = null;
-    const select = byId("catalog-asset");
-    select.replaceChildren(...catalogAssets.map((asset, index) => {
-      const option = document.createElement("option");
-      option.value = String(index);
-      option.textContent = `${asset.fullyQualifiedName}${asset.description ? ` — ${asset.description}` : ""}`;
-      return option;
-    }));
-    byId("asset-picker-wrap").hidden = catalogAssets.length === 0;
-    byId("catalog-state").textContent = `Connected · v${payload.version}`;
-    byId("catalog-title").textContent = `${catalogAssets.length} table asset${catalogAssets.length === 1 ? "" : "s"} loaded`;
-    byId("catalog-message").textContent = catalogAssets.length ? "Choose an asset to inspect its metadata and evaluate it with TrustGate." : "Connection succeeded, but this catalog returned no tables for your account.";
-    byId("catalog-result").className = "source-result READY";
-    setSourcePresentation({ status: "NOT RUN", title: "Choose a catalog asset", text: "After loading an asset into TrustGate, run a live check to verify it remains in the catalog." });
+    status = await requestJson("/api/status");
+    const connected = status.mode === "connected";
+    $("mode-banner").className = `mode-banner${connected ? " connected" : ""}`;
+    $("mode-title").textContent = connected ? "Connected catalog mode · read-only" : "Demo mode · synthetic catalog";
+    $("mode-label").textContent = connected ? "OPENMETADATA CONNECTED" : "DEMO MODE";
+    $("mode-description").textContent = connected ? "OpenMetadata is queried by the local server. Credentials stay server-side; requests are read-only." : "No catalog credentials are configured. Use synthetic examples or configure a local OpenMetadata URL and token.";
+    const received = await requestJson("/api/policies"); policies = received;
+    $("policy-library").replaceChildren(...policies.map((item) => { const option = document.createElement("option"); option.value = item.id; option.textContent = item.name; return option; }));
+    const saved = localStorage.getItem(POLICY_KEY);
+    try { policy = saved ? JSON.parse(saved) : structuredClone(policies[0]); } catch { policy = structuredClone(policies[0]); }
+    applyPolicyToForm();
+    await refreshCatalog();
   } catch (error) {
-    byId("catalog-state").textContent = "Connection failed";
-    byId("catalog-title").textContent = "Could not connect";
-    byId("catalog-message").textContent = error instanceof Error ? error.message : "Unknown connection error.";
-    byId("catalog-result").className = "source-result FAIL";
-  } finally {
-    button.disabled = false;
-    button.textContent = "Connect and load assets";
+    $("mode-title").textContent = "Local TrustGate server required";
+    $("mode-description").textContent = `${error.message} Start the app with python3 app.py.`;
+    $("mode-label").textContent = "SERVER ERROR";
   }
 }
 
-function applyCatalogAsset() {
-  catalogAsset = catalogAssets[Number(byId("catalog-asset").value)];
-  if (!catalogAsset) return;
-  byId("owner").value = catalogAsset.owner || "";
-  byId("description").value = catalogAsset.description || "";
-  byId("fields").value = catalogAsset.fields.join(", ");
-  document.querySelector(".product-code").textContent = catalogAsset.fullyQualifiedName;
-  byId("age").value = "";
-  byId("catalog-message").textContent = catalogAsset.updatedAt
-    ? `Loaded ${catalogAsset.fullyQualifiedName}. Catalog metadata was updated ${new Date(catalogAsset.updatedAt).toLocaleString()}; this is not the data refresh time, so enter the declared data refresh age before certification.`
-    : `Loaded ${catalogAsset.fullyQualifiedName}. Enter the declared data refresh age before certification.`;
-  sourceEvidence = null;
-  setSourcePresentation({ status: "NOT RUN", title: "Waiting for a live catalog check", text: "Run a fresh check to verify the selected asset is still present in OpenMetadata." });
-  byId("source-heading").textContent = "OpenMetadata asset check";
-  renderMetadata();
-}
-
-function issueCertificate() {
-  if (!updateEligibility()) return;
-  const { normalized, checks } = metadataResult;
-  certificate = createCertificate({
-    metadata: normalized,
-    checks,
-    sourceEvidence,
-    controls: readControls(),
-    id: `TG-${crypto.randomUUID().toUpperCase()}`,
-    productId: catalogAsset?.fullyQualifiedName || "weather.city.observations",
-  });
-  byId("cert-panel").className = "cert-panel READY";
-  byId("cert-title").textContent = "Readiness certificate issued";
-  byId("cert-text").textContent = `Valid for 24 hours. Expires ${new Date(certificate.expires_at).toLocaleString()}. This is a scoped demo record, not an independent audit.`;
-  byId("cert-id").textContent = certificate.certificate_id;
-  byId("download").disabled = false;
-  setPill("layer-cert", "ISSUED");
-}
-
-function downloadCertificate() {
-  if (!certificate || !certificateIsCurrent(certificate)) {
-    byId("download").disabled = true;
-    return;
-  }
-  const blob = new Blob([`${JSON.stringify(certificate, null, 2)}\n`], { type: "application/json" });
-  const objectUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = objectUrl;
-  anchor.download = `${certificate.certificate_id.toLowerCase()}.json`;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-}
-
-for (const id of ["owner", "description", "age", "fields"]) byId(id).addEventListener("input", renderMetadata);
-controls.forEach((checkbox) => checkbox.addEventListener("change", invalidateCertificate));
-byId("run-meta").addEventListener("click", runAnimatedChecks);
-byId("check-source").addEventListener("click", checkLiveSource);
-byId("issue").addEventListener("click", issueCertificate);
-byId("download").addEventListener("click", downloadCertificate);
-byId("reset").addEventListener("click", () => setScenario("ready"));
-byId("catalog-connect").addEventListener("click", connectCatalog);
-byId("catalog-apply").addEventListener("click", applyCatalogAsset);
-document.querySelectorAll("[data-preset]").forEach((button) => button.addEventListener("click", () => setScenario(button.dataset.preset)));
-
-renderMetadata();
-window.setInterval(() => {
-  updateEligibility();
-  if (certificate && !certificateIsCurrent(certificate)) {
-    certificate = null;
-    byId("download").disabled = true;
-    byId("cert-panel").className = "cert-panel REVIEW";
-    byId("cert-title").textContent = "Certificate expired";
-    byId("cert-text").textContent = "Issue a new certificate after refreshing source evidence.";
-    byId("cert-id").textContent = "";
-    setPill("layer-cert", "EXPIRED");
-  }
+for (const id of ["owner", "description", "age", "fields"]) $(id).addEventListener("input", renderMetadata);
+$("run-meta").addEventListener("click", runAnimatedChecks);
+$("reset").addEventListener("click", () => useAsset("mock", mockAssets[0]));
+$("check-source").addEventListener("click", checkLiveSource);
+$("evaluate-runtime").addEventListener("click", evaluateRuntime);
+$("download-certificate").addEventListener("click", () => { if (decisionCertificate) downloadJson(`${evaluation.evaluation_id.toLowerCase()}-certificate.json`, decisionCertificate); });
+$("download-trace").addEventListener("click", () => { if (evaluation && !evaluationStaleness(evaluation, policy, readMetadata()).stale) downloadJson(`${evaluation.evaluation_id.toLowerCase()}-decision-trace.json`, { trace_type: "TrustGate decision trace", exported_at: new Date().toISOString(), active_policy: policy, runtime_evaluation: evaluation, certificate: decisionCertificate }); });
+$("mock-asset").addEventListener("change", () => { mockAsset = mockAssets.find((asset) => asset.id === $("mock-asset").value); renderCompare(); });
+$("om-asset").addEventListener("change", () => { omAsset = openMetadataAssets.find((asset) => asset.id === $("om-asset").value || asset.fullyQualifiedName === $("om-asset").value); renderCompare(); });
+$("use-openmetadata").addEventListener("click", () => useAsset("openmetadata", omAsset));
+$("refresh-catalog").addEventListener("click", refreshCatalog);
+$("apply-policy").addEventListener("click", applyPolicy);
+$("reset-policy").addEventListener("click", resetPolicy);
+$("policy-library").addEventListener("change", () => setPolicyById($("policy-library").value));
+for (const input of document.querySelectorAll("#policy-name,#require-owner,#require-description,#require-schema,#minimum-fields,#maximum-age,#outcome-owner,#outcome-description,#outcome-schemaFields,#outcome-freshness,#outcome-requiredEvidence,#certificate-ttl,#evidence-options input")) input.addEventListener("input", () => { $("policy-dirty").textContent = "Unsaved edits · apply to activate"; });
+for (const input of document.querySelectorAll("#policy-name,#require-owner,#require-description,#require-schema,#minimum-fields,#maximum-age,#outcome-owner,#outcome-description,#outcome-schemaFields,#outcome-freshness,#outcome-requiredEvidence,#certificate-ttl,#evidence-options input")) input.addEventListener("change", () => { $("policy-dirty").textContent = "Unsaved edits · apply to activate"; });
+window.setInterval(async () => {
+  if (status.mode !== "connected" || targetSource !== "openmetadata" || !selectedAsset?.fullyQualifiedName) return;
+  try {
+    const fresh = await requestJson(`/api/assets?source=openmetadata&id=${encodeURIComponent(selectedAsset.fullyQualifiedName)}`);
+    const next = fresh.asset;
+    if (next && stableFingerprint(next) !== stableFingerprint(selectedAsset)) {
+      omAsset = next; selectedAsset = next; openMetadataAssets = openMetadataAssets.map((asset) => asset.fullyQualifiedName === next.fullyQualifiedName ? next : asset);
+      catalogChanged = true; $("refresh-indicator").textContent = "Catalog changed · reload asset"; renderCompare(); renderEvaluation();
+    }
+  } catch { /* Keep last snapshot visible; manual refresh surfaces connection errors. */ }
 }, 30_000);
+window.setInterval(() => { renderEvaluation(); }, 15_000);
+init();
