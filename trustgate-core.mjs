@@ -2,6 +2,15 @@ export const POLICY_VERSION = "1.1";
 export const EVIDENCE_MAX_AGE_MS = 15 * 60 * 1000;
 export const CERTIFICATE_TTL_MS = 24 * 60 * 60 * 1000;
 export const SOURCE_MAX_AGE_HOURS = 3;
+export const DEFAULT_POLICY = Object.freeze({
+  id: "balanced-data-product-readiness",
+  name: "Balanced data product readiness",
+  version: "1.0.0",
+  metadata: { requireOwner: true, requireDescription: true, requireSchemaFields: true, minimumSchemaFields: 8, maximumRefreshAgeHours: 24 },
+  failureOutcomes: { owner: "BLOCK", description: "BLOCK", schemaFields: "BLOCK", freshness: "REVIEW", requiredEvidence: "BLOCK" },
+  requiredEvidence: ["metadata_snapshot", "catalog_source"],
+  certificateTtlMinutes: 60,
+});
 
 const trim = (value) => String(value ?? "").trim();
 
@@ -88,7 +97,7 @@ export function canIssueCertificate({ metadataDecision, sourceEvidence, controls
     && controls.every((control) => control.declared === true);
 }
 
-export function createCertificate({ metadata, checks, sourceEvidence, controls, id, productId = "weather.city.observations", now = Date.now() }) {
+export function createCertificate({ metadata, checks, sourceEvidence, controls, id, now = Date.now() }) {
   if (!id) throw new Error("A unique certificate ID is required.");
   const issuedAt = new Date(now);
   const expiresAt = new Date(now + CERTIFICATE_TTL_MS);
@@ -98,7 +107,7 @@ export function createCertificate({ metadata, checks, sourceEvidence, controls, 
     expires_at: expiresAt.toISOString(),
     policy_version: POLICY_VERSION,
     product: {
-      product_id: productId,
+      product_id: "weather.city.observations",
       owner: metadata.owner,
       description: metadata.description,
       declared_refresh_age_hours: metadata.refreshAgeHours,
@@ -117,4 +126,76 @@ export function certificateIsCurrent(certificate, now = Date.now()) {
   const expiresAt = Date.parse(certificate?.expires_at ?? "");
   const issuedAt = Date.parse(certificate?.issued_at ?? "");
   return Number.isFinite(expiresAt) && Number.isFinite(issuedAt) && issuedAt <= now && now < expiresAt;
+}
+
+export function stableFingerprint(value) {
+  const stable = (input) => Array.isArray(input)
+    ? `[${input.map(stable).join(",")}]`
+    : input && typeof input === "object"
+      ? `{${Object.keys(input).sort().map((key) => `${JSON.stringify(key)}:${stable(input[key])}`).join(",")}}`
+      : JSON.stringify(input);
+  const text = stable(value);
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i += 1) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+export function evaluatePolicy(metadata, policy, { evidence = {}, now = Date.now() } = {}) {
+  const rules = policy.metadata;
+  const fields = Array.isArray(metadata.fields) ? metadata.fields.map((x) => String(x).trim()).filter(Boolean) : [];
+  const maxAge = Number(rules.maximumRefreshAgeHours);
+  const refreshAge = Number(metadata.refreshAgeHours);
+  const requiredEvidence = Array.isArray(policy.requiredEvidence) ? policy.requiredEvidence : [];
+  const failureOutcomes = policy.failureOutcomes ?? {};
+  const checks = [];
+  const add = (id, label, ok, detail, outcome = "BLOCK", skipped = false) => {
+    const status = skipped ? "PASS" : ok ? "PASS" : outcome === "REVIEW" ? "REVIEW" : "BLOCKED";
+    checks.push({ id, label, status, detail, policyOutcome: outcome });
+  };
+  add("owner", "Accountable owner", !rules.requireOwner || Boolean(String(metadata.owner ?? "").trim()), rules.requireOwner ? (metadata.owner || "Owner is missing") : "Policy does not require an owner", failureOutcomes.owner, !rules.requireOwner);
+  add("description", "Business description", !rules.requireDescription || Boolean(String(metadata.description ?? "").trim()), rules.requireDescription ? (metadata.description || "Description is missing") : "Policy does not require a description", failureOutcomes.description, !rules.requireDescription);
+  const distinctFields = new Set(fields.map((x) => x.toLocaleLowerCase()));
+  const schemaOk = !rules.requireSchemaFields || (distinctFields.size >= Number(rules.minimumSchemaFields) && fields.length === distinctFields.size);
+  add("schemaFields", "Schema field coverage", schemaOk, rules.requireSchemaFields ? `${distinctFields.size} distinct fields; minimum ${rules.minimumSchemaFields}${fields.length !== distinctFields.size ? "; duplicate names found" : ""}` : "Policy does not require schema fields", failureOutcomes.schemaFields, !rules.requireSchemaFields);
+  const freshnessOk = Number.isFinite(refreshAge) && refreshAge >= 0 && Number.isFinite(maxAge) && refreshAge <= maxAge;
+  add("freshness", "Declared freshness", freshnessOk, `Declared ${Number.isFinite(refreshAge) ? refreshAge : "invalid"}h; maximum ${Number.isFinite(maxAge) ? maxAge : "unset"}h`, failureOutcomes.freshness);
+
+  const missingEvidence = requiredEvidence.filter((key) => !evidence[key]?.available);
+  add("requiredEvidence", "Required evidence", missingEvidence.length === 0, missingEvidence.length ? `Missing: ${missingEvidence.join(", ")}` : `Present: ${requiredEvidence.join(", ")}`, failureOutcomes.requiredEvidence);
+  const statuses = checks.map((x) => x.status);
+  const decision = statuses.includes("BLOCKED") ? "BLOCKED" : statuses.includes("REVIEW") ? "REVIEW" : "READY";
+  const metadataSnapshot = { ...metadata, fields };
+  const checkedAt = new Date(now).toISOString();
+  const certificateExpiresAt = new Date(now + Math.max(1, Number(policy.certificateTtlMinutes) || 60) * 60_000).toISOString();
+  const policyFingerprint = stableFingerprint(policy);
+  const assetFingerprint = stableFingerprint(metadataSnapshot);
+  const evaluation = {
+    evaluation_id: `TG-${new Date(now).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+    status: decision,
+    checked_at: checkedAt,
+    expires_at: certificateExpiresAt,
+    policy_id: policy.id,
+    policy_version: policy.version,
+    policy_fingerprint: policyFingerprint,
+    asset_fingerprint: assetFingerprint,
+    asset: metadataSnapshot,
+    checks,
+    required_evidence: requiredEvidence,
+    evidence,
+    reasons: checks.filter((check) => check.status !== "PASS").map((check) => `${check.label}: ${check.detail}`),
+  };
+  return evaluation;
+}
+
+export function evaluationStaleness(evaluation, policy, metadata, now = Date.now()) {
+  if (!evaluation) return { stale: true, reason: "No runtime evaluation exists yet." };
+  if (evaluation.policy_fingerprint !== stableFingerprint(policy)) return { stale: true, reason: "The active policy changed after this evaluation." };
+  if (evaluation.asset_fingerprint !== stableFingerprint({ ...metadata, fields: Array.isArray(metadata.fields) ? metadata.fields : [] })) return { stale: true, reason: "Catalog metadata changed after this evaluation." };
+  if (now >= Date.parse(evaluation.expires_at)) return { stale: true, reason: "The evaluation expired; evidence must be checked again." };
+  for (const key of evaluation.required_evidence ?? []) {
+    const item = evaluation.evidence?.[key];
+    if (!item?.available) return { stale: true, reason: `Required evidence "${key}" is no longer available.` };
+    if (item.expiresAt && now >= Date.parse(item.expiresAt)) return { stale: true, reason: `Required evidence "${key}" expired.` };
+  }
+  return { stale: false, reason: "Policy, asset snapshot, and required evidence are current." };
 }
