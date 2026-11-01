@@ -1,0 +1,32 @@
+[
+  {
+    "id": "balanced-data-product-readiness",
+    "name": "Balanced data product readiness",
+    "version": "1.0.0",
+    "description": "A practical portfolio baseline: block missing essentials, review declared freshness exceptions.",
+    "metadata": { "requireOwner": true, "requireDescription": true, "requireSchemaFields": true, "minimumSchemaFields": 8, "maximumRefreshAgeHours": 24 },
+    "failureOutcomes": { "owner": "BLOCK", "description": "BLOCK", "schemaFields": "BLOCK", "freshness": "REVIEW", "requiredEvidence": "BLOCK" },
+    "requiredEvidence": ["metadata_snapshot", "catalog_source"],
+    "certificateTtlMinutes": 60
+  },
+  {
+    "id": "discovery-review-first",
+    "name": "Discovery review-first",
+    "version": "1.0.0",
+    "description": "Useful during onboarding: incomplete metadata triggers human review instead of an immediate block.",
+    "metadata": { "requireOwner": true, "requireDescription": true, "requireSchemaFields": true, "minimumSchemaFields": 3, "maximumRefreshAgeHours": 72 },
+    "failureOutcomes": { "owner": "REVIEW", "description": "REVIEW", "schemaFields": "REVIEW", "freshness": "REVIEW", "requiredEvidence": "BLOCK" },
+    "requiredEvidence": ["metadata_snapshot", "catalog_source"],
+    "certificateTtlMinutes": 30
+  },
+  {
+    "id": "strict-production-entry",
+    "name": "Strict production entry",
+    "version": "1.0.0",
+    "description": "A stricter demonstration policy for products approaching production use.",
+    "metadata": { "requireOwner": true, "requireDescription": true, "requireSchemaFields": true, "minimumSchemaFields": 10, "maximumRefreshAgeHours": 4 },
+    "failureOutcomes": { "owner": "BLOCK", "description": "BLOCK", "schemaFields": "BLOCK", "freshness": "BLOCK", "requiredEvidence": "BLOCK" },
+    "requiredEvidence": ["metadata_snapshot", "catalog_source", "openmetadata_read_only"],
+    "certificateTtlMinutes": 15
+  }
+]
