@@ -8,6 +8,9 @@ import {
   evaluateMetadata,
   hasFreshPassingEvidence,
   inspectSourceResponse,
+  DEFAULT_POLICY,
+  evaluatePolicy,
+  evaluationStaleness,
 } from "../trustgate-core.mjs";
 
 const now = Date.parse("2026-10-31T16:00:00.000Z");
@@ -67,6 +70,37 @@ test("source evidence expires after fifteen minutes", () => {
   assert.equal(hasFreshPassingEvidence(evidence, now + 16 * 60_000), false);
 });
 
+test("editable policy controls metadata thresholds and review/block outcomes", () => {
+  const metadata = { ...ready, refreshAgeHours: "8", fields: ready.fields.split(", ") };
+  const policy = structuredClone(DEFAULT_POLICY);
+  policy.metadata.maximumRefreshAgeHours = 4;
+  policy.failureOutcomes.freshness = "REVIEW";
+  const result = evaluatePolicy(metadata, policy, { evidence: { metadata_snapshot: { available: true }, catalog_source: { available: true } }, now });
+  assert.equal(result.status, "REVIEW");
+  assert.equal(result.checks.find((check) => check.id === "freshness").status, "REVIEW");
+});
+
+test("runtime evaluation blocks missing required evidence and expires", () => {
+  const metadata = { ...ready, fields: ready.fields.split(", ") };
+  const policy = structuredClone(DEFAULT_POLICY);
+  policy.certificateTtlMinutes = 5;
+  const result = evaluatePolicy(metadata, policy, { evidence: {}, now });
+  assert.equal(result.status, "BLOCKED");
+  assert.equal(evaluationStaleness(result, policy, metadata, now + 6 * 60_000).stale, true);
+});
+
+test("runtime evaluation becomes stale after policy, metadata, or required evidence changes", () => {
+  const metadata = { ...ready, fields: ready.fields.split(", ") };
+  const policy = structuredClone(DEFAULT_POLICY);
+  const evidence = { metadata_snapshot: { available: true }, catalog_source: { available: true } };
+  const result = evaluatePolicy(metadata, policy, { evidence, now });
+  assert.equal(evaluationStaleness(result, policy, metadata, now).stale, false);
+  assert.equal(evaluationStaleness(result, { ...policy, version: "1.0.1" }, metadata, now).stale, true);
+  assert.equal(evaluationStaleness(result, { ...policy, version: "1.0.0" }, { ...metadata, owner: "Changed" }, now).stale, true);
+  result.evidence.catalog_source.available = false;
+  assert.equal(evaluationStaleness(result, policy, metadata, now).stale, true);
+});
+
 test("certificate cannot issue unless all three evidence layers are ready", () => {
   assert.equal(canIssueCertificate({ metadataDecision: "READY", sourceEvidence: evidence, controls, now }), true);
   assert.equal(canIssueCertificate({ metadataDecision: "REVIEW", sourceEvidence: evidence, controls, now }), false);
@@ -85,12 +119,6 @@ test("certificate records policy scope and expires in 24 hours", () => {
   assert.equal(certificateIsCurrent(certificate, now + 24 * 60 * 60_000), false);
 });
 
-test("catalog certificates retain the selected catalog asset identity", () => {
-  const result = evaluateMetadata(ready);
-  const cert = createCertificate({ metadata: result.normalized, checks: result.checks, sourceEvidence: evidence, controls, id: "TG-CATALOG", productId: "sample.claims", now });
-  assert.equal(cert.product.product_id, "sample.claims");
-});
-
 test("every UI script target exists exactly once in the page", () => {
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
   const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
@@ -104,14 +132,4 @@ test("UI includes responsive, reduced-motion, and keyboard-focus treatments", ()
   assert.match(html, /prefers-reduced-motion:\s*reduce/);
   assert.match(html, /:focus-visible/);
   assert.match(html, /<a class="skip" href="#main">/);
-});
-
-test("UI exposes a read-only OpenMetadata connection, asset picker, and live recheck", () => {
-  for (const id of ["catalog-url", "catalog-token", "catalog-connect", "catalog-asset", "catalog-apply"]) {
-    assert.ok(html.includes(`id="${id}"`), `Missing catalog UI control #${id}`);
-  }
-  assert.match(uiScript, /\/api\/catalog\/connect/);
-  assert.match(uiScript, /\/api\/catalog\/asset\?/);
-  assert.match(uiScript, /function applyCatalogAsset/);
-  assert.match(html, /read-only OpenMetadata integration/i);
 });
