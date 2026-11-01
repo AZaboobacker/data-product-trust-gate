@@ -1,42 +1,57 @@
-# TrustGate — Data Product Readiness Demo
+# TrustGate — Runtime Data Product Readiness
 
-TrustGate is an independent portfolio project that makes data-product readiness decisions inspectable. It supports fictional metadata, a public city-weather API, and a read-only OpenMetadata catalog adapter; it has no employer branding or private data.
+TrustGate is an independent portfolio demo for policy-driven, evidence-backed data product readiness. Each evaluation is a time-stamped decision against the active policy and current metadata—not a permanent certification. A policy change, asset change, expired evaluation, or expired required evidence makes the prior decision stale.
 
-## Run the demo
+The project uses synthetic catalog records by default and can optionally read OpenMetadata tables. It has no employer branding or private data. OpenMetadata integration is read-only, and credentials remain in the local server process.
 
-Requirements: Python 3.10+ and a modern browser. No package install is needed. OpenMetadata connection requires a Personal Access Token with read access.
+## Quick start
 
-From the repository directory, run:
+Requirements: Python 3.10+ and a modern browser. No package install is required.
 
 ```bash
-python3 trustgate_server.py
+python3 app.py
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Stop the server with **Ctrl+C**. Use `python` instead of `python3` on Windows if needed. The local server binds only to loopback. Metadata checks and scenario presets work offline.
+Open [http://localhost:8000](http://localhost:8000). Ctrl+C stops the server. On Windows, use `python app.py`.
 
-### Demo walkthrough
+## Try the complete demo
 
-1. Choose **Ready**, **Needs review**, or **Blocked** to see how the metadata decision changes.
-2. Edit the owner, business description, declared refresh age, or comma-separated schema fields. The attestation recalculates immediately.
-3. Choose **Run animated checks** to watch each metadata rule execute.
-4. Choose **Check live source** to call Open-Meteo for current conditions in New York. A passing result requires an HTTP success, the expected current fields and numeric values, and a recent timestamp. Source evidence must be refreshed after 15 minutes.
-5. With ready metadata, fresh passing source evidence, and all five self-declared controls selected, choose **Issue readiness certificate** and **Download JSON**.
-6. Edit metadata or a control after issuance: the certificate is invalidated. The demo certificate expires after 24 hours.
+1. Confirm the banner says **Demo mode · synthetic catalog**. Load either fictional example from the catalog selectors.
+2. Edit owner, description, refresh age, or schema. Metadata attestation updates immediately.
+3. Use **Active certification policy** to choose a sample policy or edit required metadata, thresholds, failure outcomes, required evidence, and validity period. Apply changes to create a new policy version. **Reset to defaults** restores the baseline policy.
+4. Compare the synthetic record and OpenMetadata side by side. The OpenMetadata side is available only in connected mode; the UI labels each field's evidence source.
+5. Select **Evaluate current asset**. Review the pass/review/block checks, plain-language reasons, policy version, evidence, timestamps, and evaluation ID.
+6. Only a current **READY** evaluation can produce a decision certificate. Download the certificate and decision trace separately. Editing metadata/policy, seeing the connected asset change, or allowing validity/evidence to expire makes the result stale and disables downloads until re-evaluated.
+7. **Check live source** optionally verifies a current Open-Meteo response. It is evidence of a recent successful source response only—not proof of dataset quality or correctness. It counts only when selected as required evidence in the policy.
 
-### Connect an OpenMetadata catalog
+## Connect a read-only OpenMetadata catalog (optional)
 
-1. Open **Connect a catalog**. The endpoint defaults to the public OpenMetadata sandbox (`https://sandbox.open-metadata.org`).
-2. Paste a Personal Access Token for an account that can read tables, then choose **Connect and load assets**. The shared sandbox requires authentication for catalog data. Create the token in your OpenMetadata profile's access-token settings.
-3. Choose a table and select **Load asset into TrustGate**. TrustGate maps its catalog owner, description, and columns into the editable metadata checks. The catalog's `updatedAt` value is shown as metadata context; it is not treated as the table's data refresh time.
-4. Choose **Check live source** to re-fetch the asset by ID. This verifies that the catalog entry is still present; it does not test the underlying table data or prove its quality.
+Set the base URL and a read-only service account token in the environment where the local server runs, then start TrustGate. For example, in macOS/Linux:
 
-The integration is read-only. The token is sent to the local TrustGate server, held in process memory only, and cleared when the server stops. It is not saved in browser storage or written to disk. The generic adapter currently targets OpenMetadata's REST API; other catalogs need an adapter implementation.
+```bash
+export OPENMETADATA_URL="https://your-openmetadata-host/api"
+export OPENMETADATA_TOKEN="your-read-only-token"
+python3 app.py
+```
 
-## What the three evidence layers mean
+PowerShell:
 
-1. **Metadata attestation** — deterministic checks for an owner, a business description, a declared refresh age of no more than 24 hours, and at least eight distinct schema field names. Missing/invalid essentials block; over-limit freshness requires review.
-2. **Live source verification** — a read-only check against Open-Meteo's current-conditions endpoint. It checks response success, required fields, numeric values, and timestamp recency. It does not prove the full dataset's correctness or quality.
-3. **Purpose-specific readiness certificate** — a downloadable record containing the metadata snapshot, live-source evidence, policy version, timestamps, and five author-declared readiness controls. The controls are not independently verified; this is not a production, access, security, regulatory, or compliance certification.
+```powershell
+$env:OPENMETADATA_URL = "https://your-openmetadata-host/api"
+$env:OPENMETADATA_TOKEN = "your-read-only-token"
+python app.py
+```
+
+The server performs read-only table-list and table-detail requests. The browser never receives the token, and TrustGate does not persist it. Do not commit credentials or use a broadly privileged token. If the URL is configured but the token is missing/invalid or lacks permission, the UI reports the catalog error; demo mode remains available when no URL is configured.
+
+## What a TrustGate decision means
+
+- **Policy evaluation:** editable deterministic metadata thresholds, configurable BLOCK/REVIEW outcomes, required evidence, and policy version fingerprint.
+- **Evidence:** records source and capture/expiry times. Optional source-response evidence expires after 15 minutes; catalog reads are refreshed and checked for changes.
+- **Decision certificate:** a downloadable record of a current READY evaluation, valid only until its expiry and only for the referenced policy, evidence, and asset snapshot.
+- **Decision trace:** JSON with the active policy, evaluation checks/reasons, evidence provenance, timestamps, fingerprints, and optional issued certificate.
+
+This is a portfolio demonstration, not a production certification authority, signature, access grant, data-quality guarantee, security approval, regulatory attestation, or compliance certification. A certificate is not cryptographically signed; verify the source system and controls independently before relying on decisions operationally.
 
 ## Python metadata validator
 
@@ -61,4 +76,4 @@ node --check trustgate-core.mjs
 node --check trustgate-ui.mjs
 ```
 
-The tests cover Python contract decisions, browser-side metadata and source evidence rules, missing/stale/future source data, 15-minute evidence freshness, readiness gating, and certificate scope and expiration. The UI is designed to run locally; a real live source check requires browser internet access.
+The tests cover Python contract decisions and OpenMetadata normalization, browser-side metadata/source checks, policy evaluation, evidence requirements, staleness, readiness gating, and certificate scope/expiration. A real OpenMetadata connection and live source check require network access and a configured service.
