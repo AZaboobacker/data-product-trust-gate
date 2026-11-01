@@ -9,12 +9,10 @@
   <style>
     :root{color-scheme:light;--ink:#132238;--ink-2:#33445d;--muted:#687890;--soft:#93a0b1;--line:#e4eaf2;--canvas:#f5f7fb;--paper:#fff;--navy:#10213a;--blue:#3659e3;--blue-dark:#2746bf;--blue-soft:#edf1ff;--green:#137a54;--green-bg:#eaf7f0;--amber:#a45c0a;--amber-bg:#fff4e5;--red:#b8323c;--red-bg:#fff0f0;--shadow:0 14px 40px #1b35500b;--radius:18px}
     .meta-summary.READY{border-color:#d7ede1;background:#f3faf6}.meta-summary.REVIEW{border-color:#f2e1c6;background:#fffaf2}.meta-summary.BLOCKED{border-color:#f0d7d9;background:#fff7f7}.summary-icon{flex:none}.btn:focus-visible,.text-btn:focus-visible,.preset:focus-visible,.skip:focus{outline:3px solid #8295ff;outline-offset:2px}
+    .wide-stack{display:grid;gap:18px;margin-top:18px}.mode-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;border:1px solid var(--line);background:#fff;border-radius:13px}.mode-banner strong{font-size:12px;color:var(--navy)}.mode-banner p{margin:2px 0 0;color:var(--muted);font-size:10px}.mode-banner.connected{border-color:#cce9da;background:#f4fbf7}.mode-label{font-size:10px;letter-spacing:.06em;font-weight:850;border-radius:99px;padding:6px 9px;background:#f0f3f8;color:#617188;white-space:nowrap}.mode-banner.connected .mode-label{color:var(--green);background:var(--green-bg)}.policy-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}.policy-check{display:flex;gap:8px;align-items:center;font-size:11px;color:#394d66}.policy-check input{accent-color:var(--blue)}.policy-line{display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid #eff2f6}.policy-line:last-child{border-bottom:0}.policy-line label{font-size:11px;color:#394d66;font-weight:680}.policy-line select,.policy-line input[type=number],.select{width:100%;border:1px solid #dce3ed;border-radius:8px;background:white;color:var(--ink);padding:8px 9px;font-size:11px}.policy-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px}.policy-meta .field{margin-top:10px}.policy-evidence{display:grid;grid-template-columns:1fr 1fr;gap:7px 13px;margin:8px 0}.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compare-side{border:1px solid var(--line);border-radius:12px;padding:13px;background:#fbfcfe;min-width:0}.compare-side h3{margin:0;color:#334963;font-size:11px}.compare-asset{font-size:13px;font-weight:760;color:var(--navy);margin:10px 0 2px}.compare-origin{font-size:9px;color:#8190a4;margin-bottom:9px}.compare-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid #edf0f5;font-size:10px}.compare-row span:first-child{color:#8190a4}.compare-row span:last-child{color:#394d66;overflow-wrap:anywhere}.evaluation-banner{display:flex;align-items:center;gap:10px;padding:12px;border-radius:11px;background:#f5f7fa;border:1px solid var(--line);margin-bottom:13px}.evaluation-banner.READY{background:var(--green-bg);border-color:#d8eee2}.evaluation-banner.REVIEW{background:var(--amber-bg);border-color:#f5e4c6}.evaluation-banner.BLOCKED,.evaluation-banner.STALE{background:var(--red-bg);border-color:#f3d8d9}.evaluation-banner strong{font-size:12px;color:var(--navy)}.evaluation-banner p{margin:2px 0 0;color:#607087;font-size:10px}.decision-reasons{margin:8px 0 0;padding-left:18px;color:#596a82;font-size:10px}.trace-id{font:9px ui-monospace,SFMono-Regular,Menlo,monospace;color:#54647b;margin-top:6px;overflow-wrap:anywhere}.connected-only{display:none}.mode-banner.connected~.connected-only{display:block}.subtle{font-size:10px;color:var(--muted)}@media(max-width:620px){.policy-grid,.policy-meta,.compare-grid{grid-template-columns:1fr}.policy-line{grid-template-columns:1fr 115px}.mode-banner{align-items:flex-start;flex-direction:column}}
     @media(max-width:900px){.board{grid-template-columns:1fr 1fr}.left-stack{grid-column:1/-1}.right-stack{display:grid;grid-template-columns:1fr 1fr;grid-column:1/-1;align-items:start}.hero{align-items:flex-start;flex-direction:column}.hero-badge{margin-top:-8px}}
     @media(max-width:620px){.topbar{height:58px}.topbar-inner{padding:0 17px}.top-note{font-size:10px}.wrap{padding:29px 16px 48px}.hero{gap:17px;margin-bottom:20px}.hero h1{font-size:32px}.hero-copy{font-size:13px}.board{display:flex;flex-direction:column}.left-stack,.right-stack{width:100%}.right-stack{display:grid;grid-template-columns:1fr}.card{padding:17px;border-radius:15px}.scope{padding:0 17px 24px}.scope-inner{flex-direction:column;gap:5px}.form-grid{grid-template-columns:1fr}.field.wide{grid-column:auto}.hero-badge{font-size:10px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
-  </style>
-  <style>
-    #asset-picker-wrap[hidden]{display:none!important}#catalog-token{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.catalog-help{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
@@ -26,15 +24,49 @@
       <div class="hero-badge"><span aria-hidden="true">✦</span> Interactive demo <span aria-hidden="true">·</span> no account or API key</div>
     </section>
 
+    <section class="card" aria-labelledby="catalog-heading">
+      <div class="card-head"><div><h2 class="card-title" id="catalog-heading">Runtime catalog connection</h2><p class="card-sub">Compare synthetic demo metadata with a read-only OpenMetadata catalog asset.</p></div><span class="micro-tag" id="refresh-indicator">Not checked</span></div>
+      <div class="mode-banner" id="mode-banner"><div><strong id="mode-title">Checking connection mode…</strong><p id="mode-description">Catalog mode is determined by the local server configuration.</p></div><span class="mode-label" id="mode-label">CHECKING</span></div>
+      <div class="form-grid" style="margin-top:12px">
+        <div class="field"><label for="mock-asset">Synthetic catalog asset</label><select class="select" id="mock-asset"></select></div>
+        <div class="field"><label for="om-asset">OpenMetadata asset</label><select class="select" id="om-asset" disabled><option>Connected mode unavailable</option></select></div>
+      </div>
+      <div class="actions"><button class="btn btn-quiet" id="refresh-catalog" type="button">Refresh catalog data</button><button class="btn" id="use-openmetadata" type="button" disabled>Use OpenMetadata for evaluation</button></div>
+      <div class="compare-grid" style="margin-top:14px"><div class="compare-side" id="mock-compare"></div><div class="compare-side" id="om-compare"></div></div>
+      <p class="helper">In connected mode, set <code>OPENMETADATA_URL</code> and <code>OPENMETADATA_TOKEN</code> before starting the local server. The token stays server-side; TrustGate only makes read-only GET requests.</p>
+    </section>
+
+    <section class="card" aria-labelledby="policy-heading" style="margin-top:18px">
+      <div class="card-head"><div><h2 class="card-title" id="policy-heading">Active certification policy</h2><p class="card-sub">Edit criteria, decide how each failed check is handled, and choose required evidence.</p></div><span class="micro-tag" id="policy-version">v1.0.0</span></div>
+      <div class="form-grid"><div class="field"><label for="policy-library">Sample policy library</label><select class="select" id="policy-library"></select></div><div class="field"><label for="policy-name">Policy name</label><input class="input" id="policy-name" maxlength="80"></div></div>
+      <div class="section-kicker">Required metadata & thresholds</div>
+      <div class="policy-grid">
+        <label class="policy-check"><input id="require-owner" type="checkbox"> Owner is required</label>
+        <label class="policy-check"><input id="require-description" type="checkbox"> Description is required</label>
+        <label class="policy-check"><input id="require-schema" type="checkbox"> Schema fields are required</label>
+        <div class="policy-meta"><div class="field"><label for="minimum-fields">Minimum distinct fields</label><input class="input" id="minimum-fields" type="number" min="0" max="500" step="1"></div><div class="field"><label for="maximum-age">Maximum refresh age (hours)</label><input class="input" id="maximum-age" type="number" min="0" max="8760" step="0.5"></div></div>
+      </div>
+      <div class="section-kicker">Failure outcome</div>
+      <div id="failure-rules">
+        <div class="policy-line"><label for="outcome-owner">Owner missing</label><select id="outcome-owner"><option>BLOCK</option><option>REVIEW</option></select></div>
+        <div class="policy-line"><label for="outcome-description">Description missing</label><select id="outcome-description"><option>BLOCK</option><option>REVIEW</option></select></div>
+        <div class="policy-line"><label for="outcome-schemaFields">Schema requirement fails</label><select id="outcome-schemaFields"><option>BLOCK</option><option>REVIEW</option></select></div>
+        <div class="policy-line"><label for="outcome-freshness">Freshness exceeds threshold</label><select id="outcome-freshness"><option>BLOCK</option><option>REVIEW</option></select></div>
+        <div class="policy-line"><label for="outcome-requiredEvidence">Required evidence missing</label><select id="outcome-requiredEvidence"><option>BLOCK</option><option>REVIEW</option></select></div>
+      </div>
+      <div class="section-kicker">Evidence required for issuance</div>
+      <div class="policy-evidence" id="evidence-options">
+        <label class="policy-check"><input value="metadata_snapshot" type="checkbox"> Metadata snapshot</label>
+        <label class="policy-check"><input value="catalog_source" type="checkbox"> Catalog source record</label>
+        <label class="policy-check"><input value="openmetadata_read_only" type="checkbox"> Connected OpenMetadata source</label>
+        <label class="policy-check"><input value="live_source_check" type="checkbox"> Live source check</label>
+      </div>
+      <div class="policy-line"><label for="certificate-ttl">Decision validity (minutes)</label><input id="certificate-ttl" type="number" min="1" max="1440" value="60"></div>
+      <div class="actions"><button class="btn" id="apply-policy" type="button">Apply policy as new version</button><button class="btn btn-quiet" id="reset-policy" type="button">Reset to defaults</button><span class="subtle" id="policy-dirty">Policy unchanged</span></div>
+    </section>
+
     <div class="board">
       <div class="left-stack">
-        <section class="card" aria-labelledby="catalog-heading">
-          <div class="card-head"><div><h2 class="card-title" id="catalog-heading">Connect a catalog</h2><p class="card-sub">Read-only OpenMetadata integration. Credentials stay in this local server process and are not saved.</p></div><span class="micro-tag">OpenMetadata</span></div>
-          <div class="form-grid"><div class="field wide"><label for="catalog-url">OpenMetadata URL</label><input class="input" id="catalog-url" value="https://sandbox.open-metadata.org" autocomplete="url"></div><div class="field wide"><label for="catalog-token">Personal access token</label><input class="input" id="catalog-token" type="password" autocomplete="off" placeholder="Paste a read-only token"></div></div>
-          <div class="actions"><button class="btn" id="catalog-connect" type="button">Connect and load assets</button><span class="micro-tag" id="catalog-state">Not connected</span></div>
-          <div class="source-result" id="catalog-result" aria-live="polite"><strong id="catalog-title">Connect to OpenMetadata</strong><p id="catalog-message">Use a read-only token from your OpenMetadata account. The public sandbox requires authentication for catalog data.</p></div>
-          <div class="field" id="asset-picker-wrap" hidden><label for="catalog-asset">Catalog asset</label><select class="input" id="catalog-asset"></select><div class="actions"><button class="btn btn-quiet" id="catalog-apply" type="button">Load asset into TrustGate</button></div></div>
-        </section>
         <section class="card" aria-labelledby="metadata-heading">
           <div class="card-head"><div><h2 class="card-title" id="metadata-heading">Product metadata</h2><p class="card-sub">Edit the synthetic product contract. Results update as you type.</p></div><span class="micro-tag">Editable</span></div>
           <div class="product-line"><span class="product-id">Product identifier</span><code class="product-code">weather.city.observations</code></div>
@@ -74,17 +106,12 @@
         </section>
 
         <section class="card" aria-labelledby="readiness-heading">
-          <div class="card-head"><div><h2 class="card-title" id="readiness-heading">Purpose-specific readiness</h2><p class="card-sub">Declarations attached to this demo certificate.</p></div><span class="micro-tag">Self-declared</span></div>
-          <p class="control-note">These statements are not independently verified. A checked box means only that the demo's author has declared it.</p>
-          <div class="controls" id="controls">
-            <label class="control"><input type="checkbox" value="intended_use" checked><span>Intended use is documented</span></label>
-            <label class="control"><input type="checkbox" value="sensitivity" checked><span>Sensitivity is classified</span></label>
-            <label class="control"><input type="checkbox" value="access_policy" checked><span>Access policy is documented</span></label>
-            <label class="control"><input type="checkbox" value="lineage" checked><span>Lineage is documented</span></label>
-            <label class="control"><input type="checkbox" value="quality_expectations" checked><span>Quality expectations are defined</span></label>
-          </div>
-          <div class="actions"><button class="btn" id="issue" type="button" disabled>Issue readiness certificate</button><button class="btn btn-quiet" id="download" type="button" disabled>Download JSON</button></div>
-          <div class="cert-panel" id="cert-panel" aria-live="polite"><strong id="cert-title">No certificate issued</strong><p id="cert-text">Run the source check and meet the decision rule to enable issuance.</p><div class="cert-id" id="cert-id"></div></div>
+          <div class="card-head"><div><h2 class="card-title" id="readiness-heading">Runtime readiness decision</h2><p class="card-sub">A time-stamped result under the active policy—not a permanent certified label.</p></div><span class="micro-tag" id="evaluation-time">Not evaluated</span></div>
+          <div class="evaluation-banner" id="evaluation-banner" aria-live="polite"><div><strong id="evaluation-title">No runtime evaluation yet</strong><p id="evaluation-message">Choose a source, then evaluate the current asset against the active policy.</p><div class="trace-id" id="evaluation-id"></div></div></div>
+          <ul class="check-list" id="policy-checks"></ul>
+          <div class="section-kicker">Decision reasons</div><ul class="decision-reasons" id="decision-reasons"><li>Runtime evaluation has not been run.</li></ul>
+          <div class="actions"><button class="btn" id="evaluate-runtime" type="button">Evaluate current asset</button><button class="btn btn-quiet" id="download-certificate" type="button" disabled>Download decision certificate</button><button class="btn btn-quiet" id="download-trace" type="button" disabled>Download decision trace</button></div>
+          <div class="cert-panel" id="cert-panel"><strong id="cert-title">Certificate unavailable</strong><p id="cert-text">A certificate can be issued only for a READY runtime decision, with current required evidence.</p><div class="cert-id" id="cert-id"></div></div>
         </section>
       </div>
     </div>
