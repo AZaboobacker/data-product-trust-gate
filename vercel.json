@@ -1,1 +1,8 @@
-fatal: path 'vercel.json' exists on disk, but not in 'HEAD'
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "main.py": {
+      "maxDuration": 30
+    }
+  }
+}
