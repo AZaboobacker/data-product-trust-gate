@@ -14,6 +14,12 @@ python3 app.py
 
 Open [http://localhost:8000](http://localhost:8000). Ctrl+C stops the server. On Windows, use `python app.py`.
 
+## Deploy to Vercel
+
+The repository includes a FastAPI serverless entrypoint and Vercel configuration. To deploy from the Vercel dashboard, import this GitHub repository, keep the project root at `.`, and use the detected FastAPI settings. Vercel installs `requirements.txt`; no separate build command is needed. The app runs in **Demo mode** by default and serves the same synthetic examples as the local demo.
+
+To enable the optional read-only OpenMetadata connection, add `OPENMETADATA_URL` and `OPENMETADATA_TOKEN` as server-side Vercel environment variables, then redeploy. Do not add the token to frontend variables (for example, `NEXT_PUBLIC_*`) or commit it. If these variables are absent, the live app stays in Demo mode. The standalone Vercel entrypoint is `main.py`; `app.py` remains the one-command local server.
+
 ## Try the complete demo
 
 1. Confirm the banner says **Demo mode · synthetic catalog**. Load either fictional example from the catalog selectors.
